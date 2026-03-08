@@ -113,6 +113,74 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     return '${minutes}m ${remainingSeconds}s';
   }
 
+  String _normalizeText(String value) {
+    return value
+        .toLowerCase()
+        .replaceAll('á', 'a')
+        .replaceAll('é', 'e')
+        .replaceAll('í', 'i')
+        .replaceAll('ó', 'o')
+        .replaceAll('ú', 'u');
+  }
+
+  String? _normalizeMuscleGroupToSessionTag(String muscleGroup) {
+    final normalized = _normalizeText(muscleGroup.trim());
+
+    if (normalized.contains('pecho')) return 'pecho';
+    if (normalized.contains('espalda')) return 'espalda';
+    if (normalized.contains('hombro')) return 'hombro';
+    if (normalized.contains('biceps')) return 'biceps';
+    if (normalized.contains('triceps')) return 'triceps';
+    if (normalized.contains('pierna') ||
+        normalized.contains('cuadriceps') ||
+        normalized.contains('femoral') ||
+        normalized.contains('gluteo') ||
+        normalized.contains('gemelo')) {
+      return 'pierna';
+    }
+    if (normalized.contains('abdomen') ||
+        normalized.contains('abs') ||
+        normalized.contains('core')) {
+      return 'abdomen';
+    }
+
+    return null;
+  }
+
+  List<String> _buildSessionTags(List<_WorkoutExerciseEntry> entries) {
+    final tags = <String>{};
+
+    for (final entry in entries) {
+      final tag = _normalizeMuscleGroupToSessionTag(entry.exercise.muscleGroup);
+      if (tag != null) {
+        tags.add(tag);
+      }
+    }
+
+    const order = [
+      'pecho',
+      'espalda',
+      'hombro',
+      'biceps',
+      'triceps',
+      'pierna',
+      'abdomen',
+    ];
+
+    final sorted = tags.toList()
+      ..sort((a, b) {
+        final indexA = order.indexOf(a);
+        final indexB = order.indexOf(b);
+
+        if (indexA == -1 && indexB == -1) return a.compareTo(b);
+        if (indexA == -1) return 1;
+        if (indexB == -1) return -1;
+        return indexA.compareTo(indexB);
+      });
+
+    return sorted;
+  }
+
   ExercisePerformanceSnapshot? _statsForExercise(Exercise exercise) {
     return _exerciseSnapshots[exercise.id];
   }
@@ -957,6 +1025,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     }
 
     final finishedAt = DateTime.now();
+    final sessionTags = _buildSessionTags(exercisesWithSets);
 
     final session = WorkoutSession(
       id: finishedAt.microsecondsSinceEpoch.toString(),
@@ -965,6 +1034,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       startedAt: _startedAt,
       finishedAt: finishedAt,
       durationSeconds: _elapsedSeconds,
+      sessionTags: sessionTags,
       exercises: exercisesWithSets.map((entry) {
         return WorkoutExerciseRecord(
           exerciseId: entry.exercise.id,
@@ -1008,6 +1078,12 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                   _SummaryRow(
                     label: 'Volumen total',
                     value: '${_formatWeight(session.totalVolume)} kg',
+                  ),
+                  _SummaryRow(
+                    label: 'Etiquetas',
+                    value: session.sessionTags.isEmpty
+                        ? '--'
+                        : session.sessionTags.join(', '),
                   ),
                 ],
               ),

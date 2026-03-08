@@ -7,6 +7,7 @@ class WorkoutSession {
   final int durationSeconds;
   final List<WorkoutExerciseRecord> exercises;
   final double totalVolume;
+  final List<String> sessionTags;
 
   const WorkoutSession({
     required this.id,
@@ -17,6 +18,7 @@ class WorkoutSession {
     required this.durationSeconds,
     required this.exercises,
     required this.totalVolume,
+    required this.sessionTags,
   });
 
   int get totalExercises => exercises.length;
@@ -38,6 +40,7 @@ class WorkoutSession {
       'finishedAt': finishedAt.toIso8601String(),
       'durationSeconds': durationSeconds,
       'totalVolume': totalVolume,
+      'sessionTags': sessionTags,
       'exercises': exercises.map((e) => e.toMap()).toList(),
     };
   }
@@ -51,6 +54,7 @@ class WorkoutSession {
       finishedAt: DateTime.parse(map['finishedAt']),
       durationSeconds: map['durationSeconds'],
       totalVolume: (map['totalVolume'] as num).toDouble(),
+      sessionTags: List<String>.from(map['sessionTags'] ?? const []),
       exercises: (map['exercises'] as List)
           .map(
             (e) => WorkoutExerciseRecord.fromMap(Map<String, dynamic>.from(e)),
