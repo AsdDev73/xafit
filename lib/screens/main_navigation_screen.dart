@@ -14,18 +14,33 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
+  int _historyRefreshToken = 0;
 
-  late final List<Widget> _screens = const [
-    HomeScreen(),
-    ProgressScreen(),
-    RoutinesScreen(),
-    HistoryScreen(),
-  ];
+  List<Widget> _buildScreens() {
+    return [
+      const HomeScreen(),
+      const ProgressScreen(),
+      const RoutinesScreen(),
+      HistoryScreen(refreshToken: _historyRefreshToken),
+    ];
+  }
+
+  void _onDestinationSelected(int index) {
+    setState(() {
+      _currentIndex = index;
+
+      if (index == 3) {
+        _historyRefreshToken++;
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final screens = _buildScreens();
+
     return Scaffold(
-      body: IndexedStack(index: _currentIndex, children: _screens),
+      body: IndexedStack(index: _currentIndex, children: screens),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         height: 74,
@@ -51,11 +66,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             label: 'Historial',
           ),
         ],
-        onDestinationSelected: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
+        onDestinationSelected: _onDestinationSelected,
       ),
     );
   }
