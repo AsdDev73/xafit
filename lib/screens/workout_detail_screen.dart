@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/workout_storage.dart';
 import '../models/workout_session.dart';
 
 class WorkoutDetailScreen extends StatelessWidget {
@@ -14,7 +15,7 @@ class WorkoutDetailScreen extends StatelessWidget {
     final hour = date.hour.toString().padLeft(2, '0');
     final minute = date.minute.toString().padLeft(2, '0');
 
-    return '$day/$month/$year - $hour:$minute';
+    return '$day/$month/$year • $hour:$minute';
   }
 
   String _formatDuration(int totalSeconds) {
@@ -32,100 +33,178 @@ class WorkoutDetailScreen extends StatelessWidget {
         '${seconds.toString().padLeft(2, '0')}';
   }
 
-  Widget _buildInfoCard(String label, String value) {
+  String _formatWeight(double value) {
+    if (value == value.roundToDouble()) {
+      return value.toStringAsFixed(0);
+    }
+    return value.toStringAsFixed(1);
+  }
+
+  String _formatRest(int seconds) {
+    if (seconds < 60) return '${seconds}s';
+
+    final minutes = seconds ~/ 60;
+    final remainingSeconds = seconds % 60;
+
+    if (remainingSeconds == 0) {
+      return '${minutes}m';
+    }
+
+    return '${minutes}m ${remainingSeconds}s';
+  }
+
+  double _exerciseVolume(WorkoutExerciseRecord exercise) {
+    return exercise.sets.fold<double>(
+      0,
+      (total, set) => total + (set.weight * set.reps),
+    );
+  }
+
+  Future<void> _deleteSession(BuildContext context) async {
+    final confirmed =
+        await showDialog<bool>(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: const Text('Eliminar entrenamiento'),
+              content: const Text(
+                'Se borrará este entrenamiento del historial.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Eliminar'),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
+
+    if (!confirmed) return;
+
+    await WorkoutStorage.deleteSession(session.id);
+
+    if (!context.mounted) return;
+    Navigator.pop(context, true);
+  }
+
+  Widget _buildTopMetric({
+    required String label,
+    required String value,
+    required IconData icon,
+  }) {
     return Expanded(
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
-          child: Column(
-            children: [
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 18),
+            const SizedBox(height: 10),
+            Text(
+              value,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.white.withOpacity(0.72),
               ),
-              const SizedBox(height: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.white.withOpacity(0.75),
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _buildTag(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(text, style: const TextStyle(fontSize: 11.5)),
     );
   }
 
   Widget _buildSetRow(WorkoutSetRecord set) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
         children: [
           Expanded(
-            child: Text(
-              'Serie ${set.setNumber}',
-              style: const TextStyle(fontWeight: FontWeight.w700),
+            flex: 2,
+            child: _SetMetricCell(value: '#${set.setNumber}', label: 'Serie'),
+          ),
+          Expanded(
+            flex: 3,
+            child: _SetMetricCell(value: '${set.reps}', label: 'Reps'),
+          ),
+          Expanded(
+            flex: 3,
+            child: _SetMetricCell(
+              value: '${_formatWeight(set.weight)} kg',
+              label: 'Peso',
             ),
           ),
-          Text('${set.reps} reps'),
-          const SizedBox(width: 14),
-          Text('${set.weight} kg'),
-          const SizedBox(width: 14),
-          Text('${set.restSeconds}s'),
+          Expanded(
+            flex: 4,
+            child: _SetMetricCell(
+              value: _formatRest(set.restSeconds),
+              label: 'Descanso',
+            ),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildExerciseCard(WorkoutExerciseRecord exercise) {
+    final volume = _exerciseVolume(exercise);
+
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                exercise.exerciseName,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+            Text(
+              exercise.exerciseName,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
             ),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: exercise.tags.take(5).map((tag) {
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.06),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(tag, style: const TextStyle(fontSize: 11)),
-                  );
-                }).toList(),
-              ),
+            const SizedBox(height: 4),
+            Text(
+              exercise.muscleGroup,
+              style: TextStyle(color: Colors.white.withOpacity(0.72)),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _buildTag('${exercise.sets.length} series'),
+                _buildTag('${_formatWeight(volume)} kg'),
+                ...exercise.tags.take(4).map(_buildTag),
+              ],
+            ),
+            const SizedBox(height: 16),
             Column(children: exercise.sets.map(_buildSetRow).toList()),
           ],
         ),
@@ -138,70 +217,120 @@ class WorkoutDetailScreen extends StatelessWidget {
     final dateText = _formatDate(session.startedAt);
 
     return Scaffold(
-      appBar: AppBar(title: Text(session.routineName)),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF1E2A44), Color(0xFF203A43)],
-                ),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    session.routineName,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(dateText, style: const TextStyle(fontSize: 14)),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                _buildInfoCard('Ejercicios', '${session.totalExercises}'),
-                const SizedBox(width: 10),
-                _buildInfoCard('Series', '${session.totalSets}'),
-                const SizedBox(width: 10),
-                _buildInfoCard(
-                  'Duración',
-                  _formatDuration(session.durationSeconds),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                _buildInfoCard(
-                  'Volumen total',
-                  '${session.totalVolume.toStringAsFixed(1)} kg',
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: ListView.separated(
-                itemCount: session.exercises.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  return _buildExerciseCard(session.exercises[index]);
-                },
-              ),
-            ),
-          ],
-        ),
+      appBar: AppBar(
+        title: Text(session.routineName),
+        actions: [
+          IconButton(
+            onPressed: () => _deleteSession(context),
+            tooltip: 'Eliminar entrenamiento',
+            icon: const Icon(Icons.delete_outline_rounded),
+          ),
+        ],
       ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF1E2A44), Color(0xFF203A43)],
+              ),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  session.routineName,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  dateText,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white.withOpacity(0.90),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    _buildTopMetric(
+                      label: 'Ejercicios',
+                      value: '${session.totalExercises}',
+                      icon: Icons.fitness_center_rounded,
+                    ),
+                    const SizedBox(width: 10),
+                    _buildTopMetric(
+                      label: 'Series',
+                      value: '${session.totalSets}',
+                      icon: Icons.format_list_numbered_rounded,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    _buildTopMetric(
+                      label: 'Duración',
+                      value: _formatDuration(session.durationSeconds),
+                      icon: Icons.timer_outlined,
+                    ),
+                    const SizedBox(width: 10),
+                    _buildTopMetric(
+                      label: 'Volumen',
+                      value: '${_formatWeight(session.totalVolume)} kg',
+                      icon: Icons.bar_chart_rounded,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          const Text(
+            'Ejercicios registrados',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 12),
+          ...session.exercises.map(
+            (exercise) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _buildExerciseCard(exercise),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SetMetricCell extends StatelessWidget {
+  final String value;
+  final String label;
+
+  const _SetMetricCell({required this.value, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          value,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.62)),
+        ),
+      ],
     );
   }
 }

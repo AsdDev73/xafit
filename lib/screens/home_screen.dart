@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 
+import '../data/body_profile_storage.dart';
 import '../data/body_progress_storage.dart';
 import '../data/exercise_catalog.dart';
-import '../data/routine_seed.dart';
 import '../data/workout_storage.dart';
+import '../models/body_profile.dart';
+import '../models/body_progress_entry.dart';
 import '../models/workout_session.dart';
-import 'history_screen.dart';
-import 'progress_screen.dart';
-import 'routines_screen.dart';
+import 'workout_detail_screen.dart';
 import 'workout_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final int refreshToken;
+
+  const HomeScreen({super.key, this.refreshToken = 0});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -27,6 +29,15 @@ class _HomeScreenState extends State<HomeScreen> {
     _refreshDashboard();
   }
 
+  @override
+  void didUpdateWidget(covariant HomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.refreshToken != widget.refreshToken) {
+      _refreshDashboard();
+    }
+  }
+
   Future<void> _refreshDashboard() async {
     setState(() {
       _isLoading = true;
@@ -34,6 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final sessions = await WorkoutStorage.loadSessions();
     final progressEntries = await BodyProgressStorage.loadEntries();
+    final profile = await BodyProfileStorage.loadProfile();
 
     final now = DateTime.now();
     final startOfWeek = DateTime(
@@ -60,6 +72,14 @@ class _HomeScreenState extends State<HomeScreen> {
         ? progressEntries.first.weight
         : null;
 
+    final activities = _buildRecentActivities(
+      sessions: sessions,
+      progressEntries: progressEntries,
+      profile: profile,
+      weeklySessions: sessionsThisWeek.length,
+      weeklyVolume: weeklyVolume,
+    );
+
     if (!mounted) return;
 
     setState(() {
@@ -69,9 +89,111 @@ class _HomeScreenState extends State<HomeScreen> {
         weeklyVolume: weeklyVolume,
         currentWeight: currentWeight,
         lastSession: sessions.isNotEmpty ? sessions.first : null,
+        latestProgressEntry: progressEntries.isNotEmpty
+            ? progressEntries.first
+            : null,
+        profile: profile,
+        recentActivities: activities,
       );
       _isLoading = false;
     });
+  }
+
+  List<_RecentActivityItem> _buildRecentActivities({
+    required List<WorkoutSession> sessions,
+    required List<BodyProgressEntry> progressEntries,
+    required BodyProfile profile,
+    required int weeklySessions,
+    required double weeklyVolume,
+  }) {
+    final List<_RecentActivityItem> items = [];
+
+    if (sessions.isNotEmpty) {
+      final lastSession = sessions.first;
+      items.add(
+        _RecentActivityItem(
+          icon: Icons.fitness_center_rounded,
+          title: 'Último entrenamiento guardado',
+          subtitle:
+              '${lastSession.routineName} • ${lastSession.totalExercises} ejercicios • ${lastSession.totalSets} series',
+          accentColor: const Color(0xFF4FC3F7),
+        ),
+      );
+    }
+
+    if (progressEntries.isNotEmpty) {
+      final latest = progressEntries.first;
+
+      String metricsText = 'Peso ${_formatStaticWeight(latest.weight)} kg';
+
+      if (latest.bodyFat != null) {
+        metricsText += ' • ${_formatStaticWeight(latest.bodyFat!)}% grasa';
+      } else if (latest.waist != null) {
+        metricsText += ' • cintura ${_formatStaticWeight(latest.waist!)} cm';
+      }
+
+      items.add(
+        _RecentActivityItem(
+          icon: Icons.monitor_weight_outlined,
+          title: 'Último registro corporal',
+          subtitle: metricsText,
+          accentColor: const Color(0xFF4ADE80),
+        ),
+      );
+    }
+
+    if (weeklySessions > 0) {
+      items.add(
+        _RecentActivityItem(
+          icon: Icons.insights_rounded,
+          title: 'Resumen de esta semana',
+          subtitle:
+              '$weeklySessions entrenos • ${_formatStaticWeight(weeklyVolume)} kg de volumen',
+          accentColor: const Color(0xFFFBBF24),
+        ),
+      );
+    } else {
+      items.add(
+        const _RecentActivityItem(
+          icon: Icons.calendar_today_rounded,
+          title: 'Semana todavía vacía',
+          subtitle: 'Aún no has registrado entrenamientos esta semana.',
+          accentColor: Color(0xFFFBBF24),
+        ),
+      );
+    }
+
+    if (items.isEmpty) {
+      items.add(
+        _RecentActivityItem(
+          icon: Icons.rocket_launch_rounded,
+          title: 'Empieza a construir tu historial',
+          subtitle:
+              'Guarda tu primer entrenamiento y tu primer registro corporal.',
+          accentColor: Colors.white70,
+        ),
+      );
+    }
+
+    return items.take(3).toList();
+  }
+
+  Future<void> _openAndRefresh(Widget screen) async {
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+
+    await _refreshDashboard();
+  }
+
+  Future<void> _openLastSessionDetail() async {
+    final session = _dashboard.lastSession;
+    if (session == null) return;
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => WorkoutDetailScreen(session: session)),
+    );
+
+    await _refreshDashboard();
   }
 
   String _formatWeight(double value) {
@@ -81,7 +203,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return value.toStringAsFixed(1);
   }
 
-  String _formatVolume(double value) {
+  static String _formatStaticWeight(double value) {
     if (value == value.roundToDouble()) {
       return value.toStringAsFixed(0);
     }
@@ -100,154 +222,56 @@ class _HomeScreenState extends State<HomeScreen> {
     return '$hour:$minute';
   }
 
-  Future<void> _openAndRefresh(Widget screen) async {
-    await Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+  String _formatDaysSince(DateTime date) {
+    final diff = DateTime.now().difference(date).inDays;
 
-    await _refreshDashboard();
+    if (diff <= 0) return 'Hoy';
+    if (diff == 1) return 'Hace 1 día';
+    return 'Hace $diff días';
   }
 
-  Widget _buildMiniStat({required String title, required String value}) {
-    return Expanded(
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
-          child: Column(
-            children: [
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.white.withOpacity(0.72),
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuickActionCard({
+  Widget _buildMetricCard({
+    required String label,
+    required String value,
     required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
   }) {
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Row(
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(icon, size: 26),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.white.withOpacity(0.70),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right_rounded, size: 28),
-            ],
-          ),
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: Colors.white.withOpacity(0.05)),
         ),
-      ),
-    );
-  }
-
-  Widget _buildLastSessionCard() {
-    final session = _dashboard.lastSession;
-
-    if (session == null) {
-      return Card(
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Último entrenamiento',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                'Todavía no has guardado entrenamientos.',
-                style: TextStyle(color: Colors.white.withOpacity(0.75)),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Último entrenamiento',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-            ),
+            Icon(icon, size: 18, color: Colors.white70),
             const SizedBox(height: 12),
             Text(
-              session.routineName,
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 4),
             Text(
-              '${_formatDate(session.startedAt)} • ${_formatTime(session.startedAt)}',
-              style: TextStyle(color: Colors.white.withOpacity(0.75)),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 12,
-              runSpacing: 8,
-              children: [
-                _buildInfoPill('${session.totalExercises} ejercicios'),
-                _buildInfoPill('${session.totalSets} series'),
-                _buildInfoPill('${_formatVolume(session.totalVolume)} kg'),
-              ],
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.white.withOpacity(0.72),
+              ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSectionTitle(String text) {
+    return Text(
+      text,
+      style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
     );
   }
 
@@ -256,20 +280,452 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.06),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(text, style: const TextStyle(fontSize: 11)),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+
+  Widget _buildHeroCard() {
+    final alias = _dashboard.profile.alias.trim().isEmpty
+        ? 'Usuario'
+        : _dashboard.profile.alias.trim();
+
+    final subtitle = _dashboard.lastSession == null
+        ? 'Empieza fuerte tu siguiente sesión y construye tu historial desde hoy.'
+        : 'Último entreno: ${_formatDaysSince(_dashboard.lastSession!.startedAt)} • sigue sumando progreso.';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1E2A44), Color(0xFF203A43), Color(0xFF2C5364)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.18),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Hola, $alias',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.white.withOpacity(0.88),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Tu entrenamiento empieza aquí',
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
+              height: 1.1,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            subtitle,
+            style: TextStyle(
+              fontSize: 14,
+              height: 1.4,
+              color: Colors.white.withOpacity(0.90),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _buildInfoPill('${ExerciseCatalog.totalCount} ejercicios'),
+              _buildInfoPill(
+                '${_dashboard.weeklySessions} entrenos esta semana',
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: () => _openAndRefresh(
+                WorkoutScreen(
+                  title: 'Entrenamiento libre',
+                  availableExercises: ExerciseCatalog.allExercises,
+                ),
+              ),
+              icon: const Icon(Icons.play_arrow_rounded),
+              label: const Text('Empezar entrenamiento'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLastSessionCard() {
+    final session = _dashboard.lastSession;
+
+    if (session == null) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.04),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.white.withOpacity(0.05)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Último entrenamiento',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Todavía no has guardado entrenamientos. Cuando registres el primero aparecerá aquí.',
+              style: TextStyle(
+                height: 1.45,
+                color: Colors.white.withOpacity(0.74),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(24),
+      onTap: _openLastSessionDetail,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.04),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.white.withOpacity(0.05)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Icon(Icons.history_rounded, size: 26),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Último entrenamiento',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        session.routineName,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded, size: 28),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Text(
+              '${_formatDate(session.startedAt)} • ${_formatTime(session.startedAt)}',
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.white.withOpacity(0.74),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _buildInfoPill('${session.totalExercises} ejercicios'),
+                _buildInfoPill('${session.totalSets} series'),
+                _buildInfoPill('${_formatWeight(session.totalVolume)} kg'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActivityCard() {
+    final activities = _dashboard.recentActivities;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Actividad reciente',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 14),
+          Column(
+            children: activities.map((item) {
+              final isLast = item == activities.last;
+
+              return Padding(
+                padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: item.accentColor.withOpacity(0.14),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(item.icon, size: 20, color: item.accentColor),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.04),
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.title,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              item.subtitle,
+                              style: TextStyle(
+                                fontSize: 13,
+                                height: 1.4,
+                                color: Colors.white.withOpacity(0.72),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildObjectiveCard() {
+    final profile = _dashboard.profile;
+    final currentWeight = _dashboard.currentWeight;
+    final targetWeight = profile.targetWeight;
+
+    String statusText = profile.goal;
+    String detailText =
+        'Configura un objetivo corporal en Progreso para que XaFit tenga más contexto sobre tu evolución.';
+    double? difference;
+    bool? isOnTargetDirection;
+
+    if (targetWeight != null && currentWeight != null) {
+      difference = (targetWeight - currentWeight).abs();
+
+      if (profile.goal.toLowerCase().contains('bajar')) {
+        isOnTargetDirection = currentWeight <= targetWeight;
+      } else if (profile.goal.toLowerCase().contains('subir')) {
+        isOnTargetDirection = currentWeight >= targetWeight;
+      }
+
+      detailText =
+          'Actual ${_formatWeight(currentWeight)} kg • objetivo ${_formatWeight(targetWeight)} kg';
+    } else if (targetWeight != null) {
+      detailText =
+          'Objetivo configurado en ${_formatWeight(targetWeight)} kg. Registra tu peso actual para compararlo.';
+    }
+
+    final Color statusColor = isOnTargetDirection == null
+        ? const Color(0xFF4FC3F7)
+        : isOnTargetDirection
+        ? const Color(0xFF4ADE80)
+        : const Color(0xFFFBBF24);
+
+    final String statusLabel = isOnTargetDirection == null
+        ? 'Objetivo activo'
+        : isOnTargetDirection
+        ? 'Objetivo alcanzado'
+        : 'En progreso';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Objetivo actual',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  statusText,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.14),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  statusLabel,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: statusColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            detailText,
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.45,
+              color: Colors.white.withOpacity(0.74),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              _buildObjectiveMiniBox(
+                label: 'Peso actual',
+                value: currentWeight != null
+                    ? '${_formatWeight(currentWeight)} kg'
+                    : '--',
+              ),
+              const SizedBox(width: 10),
+              _buildObjectiveMiniBox(
+                label: 'Peso objetivo',
+                value: targetWeight != null
+                    ? '${_formatWeight(targetWeight)} kg'
+                    : '--',
+              ),
+              const SizedBox(width: 10),
+              _buildObjectiveMiniBox(
+                label: 'Diferencia',
+                value: difference != null
+                    ? '${_formatWeight(difference)} kg'
+                    : '--',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildObjectiveMiniBox({
+    required String label,
+    required String value,
+  }) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.04),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11.5,
+                color: Colors.white.withOpacity(0.68),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final groupCount = defaultRoutines.length;
-    final exerciseCount = ExerciseCatalog.totalCount;
     final currentWeight = _dashboard.currentWeight != null
         ? '${_formatWeight(_dashboard.currentWeight!)} kg'
         : '--';
-    final weeklyVolume = '${_formatVolume(_dashboard.weeklyVolume)} kg';
+
+    final weeklyVolume = '${_formatWeight(_dashboard.weeklyVolume)} kg';
 
     return Scaffold(
       appBar: AppBar(
@@ -286,123 +742,53 @@ class _HomeScreenState extends State<HomeScreen> {
           : RefreshIndicator(
               onRefresh: _refreshDashboard,
               child: ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                 children: [
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF203A43), Color(0xFF2C5364)],
-                      ),
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Tu entrenamiento empieza aquí',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Controla tu semana, registra tu progreso y entrena con todo en una sola app.',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.white.withOpacity(0.90),
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                        SizedBox(
-                          width: double.infinity,
-                          child: FilledButton.icon(
-                            onPressed: () => _openAndRefresh(
-                              WorkoutScreen(
-                                title: 'Entrenamiento libre',
-                                availableExercises:
-                                    ExerciseCatalog.allExercises,
-                              ),
-                            ),
-                            icon: const Icon(Icons.play_arrow_rounded),
-                            label: const Text('Empezar entrenamiento'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      _buildMiniStat(
-                        title: 'Entrenos totales',
-                        value: '${_dashboard.totalSessions}',
-                      ),
-                      const SizedBox(width: 12),
-                      _buildMiniStat(
-                        title: 'Peso actual',
-                        value: currentWeight,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      _buildMiniStat(
-                        title: 'Entrenos semana',
-                        value: '${_dashboard.weeklySessions}',
-                      ),
-                      const SizedBox(width: 12),
-                      _buildMiniStat(
-                        title: 'Volumen semana',
-                        value: weeklyVolume,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      _buildMiniStat(title: 'Grupos', value: '$groupCount'),
-                      const SizedBox(width: 12),
-                      _buildMiniStat(
-                        title: 'Ejercicios',
-                        value: '$exerciseCount',
-                      ),
-                    ],
-                  ),
+                  _buildHeroCard(),
                   const SizedBox(height: 18),
-                  const Text(
-                    'Resumen',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                  Row(
+                    children: [
+                      _buildMetricCard(
+                        label: 'Entrenos totales',
+                        value: '${_dashboard.totalSessions}',
+                        icon: Icons.fitness_center_rounded,
+                      ),
+                      const SizedBox(width: 10),
+                      _buildMetricCard(
+                        label: 'Peso actual',
+                        value: currentWeight,
+                        icon: Icons.monitor_weight_outlined,
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      _buildMetricCard(
+                        label: 'Entrenos semana',
+                        value: '${_dashboard.weeklySessions}',
+                        icon: Icons.calendar_today_rounded,
+                      ),
+                      const SizedBox(width: 10),
+                      _buildMetricCard(
+                        label: 'Volumen semana',
+                        value: weeklyVolume,
+                        icon: Icons.bar_chart_rounded,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 22),
+                  _buildSectionTitle('Último entrenamiento'),
                   const SizedBox(height: 12),
                   _buildLastSessionCard(),
-                  const SizedBox(height: 18),
-                  const Text(
-                    'Accesos rápidos',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                  ),
+                  const SizedBox(height: 22),
+                  _buildSectionTitle('Actividad reciente'),
                   const SizedBox(height: 12),
-                  _buildQuickActionCard(
-                    icon: Icons.show_chart_rounded,
-                    title: 'Progreso',
-                    subtitle: 'Peso, medidas y gráfica corporal',
-                    onTap: () => _openAndRefresh(const ProgressScreen()),
-                  ),
-                  _buildQuickActionCard(
-                    icon: Icons.menu_book_rounded,
-                    title: 'Biblioteca',
-                    subtitle: 'Explora ejercicios por grupo muscular',
-                    onTap: () => _openAndRefresh(const RoutinesScreen()),
-                  ),
-                  _buildQuickActionCard(
-                    icon: Icons.history_rounded,
-                    title: 'Historial',
-                    subtitle: 'Consulta tus entrenamientos anteriores',
-                    onTap: () => _openAndRefresh(const HistoryScreen()),
-                  ),
+                  _buildActivityCard(),
+                  const SizedBox(height: 22),
+                  _buildSectionTitle('Objetivo actual'),
+                  const SizedBox(height: 12),
+                  _buildObjectiveCard(),
                 ],
               ),
             ),
@@ -416,6 +802,9 @@ class _HomeDashboardData {
   final double weeklyVolume;
   final double? currentWeight;
   final WorkoutSession? lastSession;
+  final BodyProgressEntry? latestProgressEntry;
+  final BodyProfile profile;
+  final List<_RecentActivityItem> recentActivities;
 
   const _HomeDashboardData({
     required this.totalSessions,
@@ -423,6 +812,9 @@ class _HomeDashboardData {
     required this.weeklyVolume,
     required this.currentWeight,
     required this.lastSession,
+    required this.latestProgressEntry,
+    required this.profile,
+    required this.recentActivities,
   });
 
   const _HomeDashboardData.empty()
@@ -430,5 +822,22 @@ class _HomeDashboardData {
       weeklySessions = 0,
       weeklyVolume = 0,
       currentWeight = null,
-      lastSession = null;
+      lastSession = null,
+      latestProgressEntry = null,
+      profile = BodyProfile.empty,
+      recentActivities = const [];
+}
+
+class _RecentActivityItem {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color accentColor;
+
+  const _RecentActivityItem({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.accentColor,
+  });
 }

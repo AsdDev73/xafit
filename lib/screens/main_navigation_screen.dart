@@ -14,11 +14,12 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
+  int _homeRefreshToken = 0;
   int _historyRefreshToken = 0;
 
   List<Widget> _buildScreens() {
     return [
-      const HomeScreen(),
+      HomeScreen(refreshToken: _homeRefreshToken),
       const ProgressScreen(),
       const RoutinesScreen(),
       HistoryScreen(refreshToken: _historyRefreshToken),
@@ -28,6 +29,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   void _onDestinationSelected(int index) {
     setState(() {
       _currentIndex = index;
+
+      if (index == 0) {
+        _homeRefreshToken++;
+      }
 
       if (index == 3) {
         _historyRefreshToken++;

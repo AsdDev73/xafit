@@ -94,12 +94,17 @@ class WorkoutStorage {
 
   static Future<void> saveSession(WorkoutSession session) async {
     final sessions = await loadSessions();
+
+    sessions.removeWhere((item) => item.id == session.id);
     sessions.insert(0, session);
 
-    final prefs = await SharedPreferences.getInstance();
-    final raw = jsonEncode(sessions.map((session) => session.toMap()).toList());
+    await _persistSessions(sessions);
+  }
 
-    await prefs.setString(_sessionsKey, raw);
+  static Future<void> deleteSession(String sessionId) async {
+    final sessions = await loadSessions();
+    sessions.removeWhere((item) => item.id == sessionId);
+    await _persistSessions(sessions);
   }
 
   static Future<void> clearAllSessions() async {
@@ -132,5 +137,11 @@ class WorkoutStorage {
     }
 
     return snapshots.map((key, value) => MapEntry(key, value.toSnapshot()));
+  }
+
+  static Future<void> _persistSessions(List<WorkoutSession> sessions) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = jsonEncode(sessions.map((session) => session.toMap()).toList());
+    await prefs.setString(_sessionsKey, raw);
   }
 }
