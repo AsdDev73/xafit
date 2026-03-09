@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../models/exercise.dart';
 import '../models/workout_session.dart';
+import '../repositories/custom_exercise_repository.dart';
 import '../repositories/workout_repository.dart';
 import '../services/app_repositories.dart';
 
@@ -29,8 +30,12 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   static const Color _warningColor = Color(0xFFFBBF24);
 
   final WorkoutRepository _workoutRepository = AppRepositories.workouts;
+  final CustomExerciseRepository _customExerciseRepository =
+      AppRepositories.customExercises;
 
   final List<_WorkoutExerciseEntry> _selectedExercises = [];
+  final List<Exercise> _customExercises = [];
+
   Map<String, ExercisePerformanceSnapshot> _exerciseSnapshots = {};
 
   late final DateTime _startedAt;
@@ -55,6 +60,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     });
 
     _loadExerciseSnapshots();
+    _loadCustomExercises();
   }
 
   Future<void> _loadExerciseSnapshots() async {
@@ -65,6 +71,33 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     setState(() {
       _exerciseSnapshots = snapshots;
     });
+  }
+
+  Future<void> _loadCustomExercises() async {
+    final customExercises = await _customExerciseRepository
+        .getAllCustomExercises();
+
+    if (!mounted) return;
+
+    setState(() {
+      _customExercises
+        ..clear()
+        ..addAll(customExercises);
+    });
+  }
+
+  List<Exercise> get _allAvailableExercises {
+    final Map<String, Exercise> byId = {};
+
+    for (final exercise in widget.availableExercises) {
+      byId[exercise.id] = exercise;
+    }
+
+    for (final exercise in _customExercises) {
+      byId[exercise.id] = exercise;
+    }
+
+    return byId.values.toList();
   }
 
   @override
@@ -258,7 +291,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
           builder: (context, setModalState) {
             final query = search.trim().toLowerCase();
 
-            final available = widget.availableExercises.where((exercise) {
+            final available = _allAvailableExercises.where((exercise) {
               final notSelected = !selectedIds.contains(exercise.id);
               final matchesSearch =
                   query.isEmpty ||
@@ -393,9 +426,11 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                                                           999,
                                                         ),
                                                   ),
-                                                  child: const Text(
-                                                    'Añadir',
-                                                    style: TextStyle(
+                                                  child: Text(
+                                                    exercise.isCustom
+                                                        ? 'Custom'
+                                                        : 'Añadir',
+                                                    style: const TextStyle(
                                                       color: _accentColor,
                                                       fontWeight:
                                                           FontWeight.w700,
@@ -1334,6 +1369,11 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                   icon: Icons.bar_chart_rounded,
                   label: _formatCompactVolume(_exerciseVolume(entry)),
                 ),
+                if (entry.exercise.isCustom)
+                  const _MiniTagChip(
+                    icon: Icons.auto_awesome_rounded,
+                    label: 'Custom',
+                  ),
                 if (stats != null)
                   _MiniTagChip(
                     icon: Icons.trending_up_rounded,

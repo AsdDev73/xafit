@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../data/exercise_catalog.dart';
 import '../models/exercise.dart';
 import '../models/routine.dart';
+import '../repositories/custom_exercise_repository.dart';
+import '../services/app_repositories.dart';
 import 'workout_screen.dart';
 
 class RoutineDetailScreen extends StatefulWidget {
@@ -15,9 +17,13 @@ class RoutineDetailScreen extends StatefulWidget {
 }
 
 class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
-  final List<Exercise> _customExercises = [];
+  final CustomExerciseRepository _customExerciseRepository =
+      AppRepositories.customExercises;
   final TextEditingController _searchController = TextEditingController();
 
+  final List<Exercise> _customExercises = [];
+
+  bool _isLoadingCustomExercises = true;
   String _searchText = '';
   String? _selectedTag;
 
@@ -51,6 +57,27 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
 
       return matchesSearch && matchesTag;
     }).toList();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCustomExercises();
+  }
+
+  Future<void> _loadCustomExercises() async {
+    final customExercises = await _customExerciseRepository.getByMuscleGroup(
+      widget.routine.muscleGroup,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _customExercises
+        ..clear()
+        ..addAll(customExercises);
+      _isLoadingCustomExercises = false;
+    });
   }
 
   Future<void> _addCustomExercise() async {
@@ -122,9 +149,8 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
     );
 
     if (result != null) {
-      setState(() {
-        _customExercises.add(result);
-      });
+      await _customExerciseRepository.saveCustomExercise(result);
+      await _loadCustomExercises();
 
       if (!mounted) return;
 
@@ -135,6 +161,49 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
         ),
       );
     }
+
+    nameController.dispose();
+    tagsController.dispose();
+  }
+
+  Future<void> _deleteCustomExercise(Exercise exercise) async {
+    final confirmed =
+        await showDialog<bool>(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: const Text('Eliminar ejercicio personalizado'),
+              content: Text(
+                'Se eliminará ${exercise.name} de tu biblioteca personalizada.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Eliminar'),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
+
+    if (!confirmed) return;
+
+    await _customExerciseRepository.deleteCustomExercise(exercise.id);
+    await _loadCustomExercises();
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${exercise.name} eliminado'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   Widget _buildTagChip(String tag) {
@@ -201,23 +270,36 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
             ],
           ),
         ),
-        trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: exercise.isCustom
-                ? Colors.orange.withOpacity(0.18)
-                : Colors.blue.withOpacity(0.18),
-            borderRadius: BorderRadius.circular(30),
-          ),
-          child: Text(
-            exercise.isCustom ? 'Custom' : 'Base',
-            style: TextStyle(
-              fontSize: 12,
-              color: exercise.isCustom
-                  ? Colors.orangeAccent
-                  : Colors.lightBlueAccent,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: exercise.isCustom
+                    ? Colors.orange.withOpacity(0.18)
+                    : Colors.blue.withOpacity(0.18),
+                borderRadius: BorderRadius.circular(30),
+              ),
+              child: Text(
+                exercise.isCustom ? 'Custom' : 'Base',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: exercise.isCustom
+                      ? Colors.orangeAccent
+                      : Colors.lightBlueAccent,
+                ),
+              ),
             ),
-          ),
+            if (exercise.isCustom) ...[
+              const SizedBox(width: 6),
+              IconButton(
+                tooltip: 'Eliminar personalizado',
+                onPressed: () => _deleteCustomExercise(exercise),
+                icon: const Icon(Icons.delete_outline_rounded),
+              ),
+            ],
+          ],
         ),
       ),
     );
@@ -241,137 +323,142 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
         icon: const Icon(Icons.add),
         label: const Text('Personalizado'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF1E2A44), Color(0xFF203A43)],
-                ),
-                borderRadius: BorderRadius.circular(20),
-              ),
+      body: _isLoadingCustomExercises
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(16),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    widget.routine.name,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF1E2A44), Color(0xFF203A43)],
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.routine.name,
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          widget.routine.description,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          '${_allExercises.length} ejercicios disponibles',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.white.withOpacity(0.85),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => WorkoutScreen(
+                                    title: 'Entreno ${widget.routine.name}',
+                                    availableExercises: _allExercises,
+                                  ),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.play_arrow_rounded),
+                            label: const Text('Entrenar solo este grupo'),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    widget.routine.description,
-                    style: const TextStyle(fontSize: 14),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _searchController,
+                    onChanged: (value) {
+                      setState(() {
+                        _searchText = value;
+                      });
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Buscar ejercicio o tag...',
+                      prefixIcon: const Icon(Icons.search),
+                      filled: true,
+                      fillColor: const Color(0xFF1A1F2B),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 12),
-                  Text(
-                    '${_allExercises.length} ejercicios disponibles',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.white.withOpacity(0.85),
+                  SizedBox(
+                    height: 42,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: FilterChip(
+                            selected: _selectedTag == null,
+                            label: const Text('Todos'),
+                            onSelected: (_) {
+                              setState(() {
+                                _selectedTag = null;
+                              });
+                            },
+                          ),
+                        ),
+                        ...availableTags.map(_buildTagChip),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => WorkoutScreen(
-                              title: 'Entreno ${widget.routine.name}',
-                              availableExercises: _allExercises,
-                            ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.play_arrow_rounded),
-                      label: const Text('Entrenar solo este grupo'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _searchController,
-              onChanged: (value) {
-                setState(() {
-                  _searchText = value;
-                });
-              },
-              decoration: InputDecoration(
-                hintText: 'Buscar ejercicio o tag...',
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                fillColor: const Color(0xFF1A1F2B),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 42,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: FilterChip(
-                      selected: _selectedTag == null,
-                      label: const Text('Todos'),
-                      onSelected: (_) {
-                        setState(() {
-                          _selectedTag = null;
-                        });
-                      },
-                    ),
-                  ),
-                  ...availableTags.map(_buildTagChip),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                '${exercises.length} resultados',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.white.withOpacity(0.75),
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Expanded(
-              child: exercises.isEmpty
-                  ? Center(
-                      child: Text(
-                        'No hay ejercicios que coincidan con tu búsqueda',
-                        style: TextStyle(color: Colors.white.withOpacity(0.75)),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '${exercises.length} resultados',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.white.withOpacity(0.75),
                       ),
-                    )
-                  : ListView.separated(
-                      itemCount: exercises.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (context, index) {
-                        final exercise = exercises[index];
-                        return _buildExerciseCard(exercise);
-                      },
                     ),
+                  ),
+                  const SizedBox(height: 10),
+                  Expanded(
+                    child: exercises.isEmpty
+                        ? Center(
+                            child: Text(
+                              'No hay ejercicios que coincidan con tu búsqueda',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.75),
+                              ),
+                            ),
+                          )
+                        : ListView.separated(
+                            itemCount: exercises.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 10),
+                            itemBuilder: (context, index) {
+                              final exercise = exercises[index];
+                              return _buildExerciseCard(exercise);
+                            },
+                          ),
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
-      ),
     );
   }
 }

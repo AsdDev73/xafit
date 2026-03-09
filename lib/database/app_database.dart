@@ -64,6 +64,17 @@ class BodyProgressRecords extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+class CustomExercises extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  TextColumn get muscleGroup => text()();
+  TextColumn get tagsJson => text().withDefault(const Constant('[]'))();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 @DriftDatabase(
   tables: [
     WorkoutSessions,
@@ -71,13 +82,14 @@ class BodyProgressRecords extends Table {
     WorkoutSets,
     ProfileRecords,
     BodyProgressRecords,
+    CustomExercises,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -88,6 +100,9 @@ class AppDatabase extends _$AppDatabase {
       if (from < 2) {
         await m.createTable(profileRecords);
         await m.createTable(bodyProgressRecords);
+      }
+      if (from < 3) {
+        await m.createTable(customExercises);
       }
     },
   );

@@ -1,23 +1,25 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-
 import 'package:flutter/widgets.dart';
-import 'services/app_repositories.dart';
-import 'services/data_migration_service.dart';
 
 import 'screens/main_navigation_screen.dart';
+import 'services/app_repositories.dart';
+import 'services/data_migration_service.dart';
 import 'services/notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await DataMigrationService(
-    legacyWorkoutRepository: AppRepositories.legacyWorkouts,
-    driftWorkoutRepository: AppRepositories.driftWorkouts,
-    legacyBodyProfileRepository: AppRepositories.legacyBodyProfile,
-    driftBodyProfileRepository: AppRepositories.driftBodyProfile,
-    legacyBodyProgressRepository: AppRepositories.legacyBodyProgress,
-    driftBodyProgressRepository: AppRepositories.driftBodyProgress,
-  ).migrateAllIfNeeded();
+  if (!kIsWeb) {
+    await DataMigrationService(
+      legacyWorkoutRepository: AppRepositories.legacyWorkouts,
+      driftWorkoutRepository: AppRepositories.driftWorkouts,
+      legacyBodyProfileRepository: AppRepositories.legacyBodyProfile,
+      driftBodyProfileRepository: AppRepositories.driftBodyProfile,
+      legacyBodyProgressRepository: AppRepositories.legacyBodyProgress,
+      driftBodyProgressRepository: AppRepositories.driftBodyProgress,
+    ).migrateAllIfNeeded();
+  }
 
   runApp(const XaFitApp());
 }
