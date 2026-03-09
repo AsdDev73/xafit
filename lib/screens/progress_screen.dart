@@ -2,11 +2,11 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import '../data/body_profile_storage.dart';
-import '../data/body_progress_storage.dart';
 import '../models/body_profile.dart';
 import '../models/body_progress_entry.dart';
+import '../services/app_repositories.dart';
 import '../services/notification_service.dart';
+import '../services/progress_service.dart';
 
 enum ProgressMetric { weight, waist, chest, arm, thigh, bodyFat }
 
@@ -18,6 +18,11 @@ class ProgressScreen extends StatefulWidget {
 }
 
 class _ProgressScreenState extends State<ProgressScreen> {
+  final ProgressService _progressService = ProgressService(
+    bodyProfileRepository: AppRepositories.bodyProfile,
+    bodyProgressRepository: AppRepositories.bodyProgress,
+  );
+
   List<BodyProgressEntry> _entries = [];
   BodyProfile _profile = BodyProfile.empty;
   bool _isLoading = true;
@@ -36,17 +41,14 @@ class _ProgressScreenState extends State<ProgressScreen> {
       _isLoading = true;
     });
 
-    final entries = await BodyProgressStorage.loadEntries();
-    final profile = await BodyProfileStorage.loadProfile();
-    final reminderSettings =
-        await NotificationService.loadWeeklyReminderSettings();
+    final overview = await _progressService.loadOverview();
 
     if (!mounted) return;
 
     setState(() {
-      _entries = entries;
-      _profile = profile;
-      _reminderSettings = reminderSettings;
+      _entries = overview.entries;
+      _profile = overview.profile;
+      _reminderSettings = overview.reminderSettings;
       _isLoading = false;
     });
   }
@@ -59,6 +61,9 @@ class _ProgressScreenState extends State<ProgressScreen> {
   }
 
   String _formatDouble(double value) {
+    if (value == value.roundToDouble()) {
+      return value.toStringAsFixed(0);
+    }
     return value.toStringAsFixed(1);
   }
 
@@ -328,9 +333,8 @@ class _ProgressScreenState extends State<ProgressScreen> {
                 const Spacer(),
                 Center(
                   child: Text(
-                    'Añade más registros para ver la gráfica',
+                    'Aún no hay suficientes datos',
                     style: TextStyle(color: Colors.white.withOpacity(0.70)),
-                    textAlign: TextAlign.center,
                   ),
                 ),
                 const Spacer(),
@@ -341,52 +345,33 @@ class _ProgressScreenState extends State<ProgressScreen> {
       );
     }
 
-    final spots = <FlSpot>[];
-    for (int i = 0; i < filtered.length; i++) {
-      final value = _metricValue(filtered[i], _selectedMetric)!;
-      spots.add(FlSpot(i.toDouble(), value));
-    }
+    final spots = List.generate(filtered.length, (index) {
+      final value = _metricValue(filtered[index], _selectedMetric)!;
+      return FlSpot(index.toDouble(), value);
+    });
 
-    double minY = _metricValue(filtered.first, _selectedMetric)!;
-    double maxY = _metricValue(filtered.first, _selectedMetric)!;
+    double minY = spots.first.y;
+    double maxY = spots.first.y;
 
-    for (final entry in filtered) {
-      final value = _metricValue(entry, _selectedMetric)!;
-      if (value < minY) minY = value;
-      if (value > maxY) maxY = value;
+    for (final spot in spots) {
+      if (spot.y < minY) minY = spot.y;
+      if (spot.y > maxY) maxY = spot.y;
     }
 
     if (minY == maxY) {
       minY -= 1;
       maxY += 1;
     } else {
-      minY -= 1;
-      maxY += 1;
-    }
-
-    final latestValue = _metricValue(filtered.last, _selectedMetric)!;
-    String changeText = '--';
-
-    if (filtered.length >= 2) {
-      final previousValue = _metricValue(
-        filtered[filtered.length - 2],
-        _selectedMetric,
-      )!;
-      final diff = latestValue - previousValue;
-      final sign = diff > 0 ? '+' : '';
-      final suffix = _selectedMetric == ProgressMetric.bodyFat
-          ? '%'
-          : _selectedMetric == ProgressMetric.weight
-          ? 'kg'
-          : 'cm';
-      changeText = '$sign${_formatDouble(diff)} $suffix';
+      final padding = (maxY - minY) * 0.15;
+      minY -= padding;
+      maxY += padding;
     }
 
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: SizedBox(
-          height: 300,
+          height: 280,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -398,47 +383,21 @@ class _ProgressScreenState extends State<ProgressScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Actual: ${_formatMetricValue(_selectedMetric, latestValue)}',
-                      style: TextStyle(color: Colors.white.withOpacity(0.75)),
-                    ),
-                  ),
-                  Text(
-                    changeText,
-                    style: TextStyle(color: Colors.white.withOpacity(0.75)),
-                  ),
-                ],
+              Text(
+                'Último valor: ${_formatMetricValue(_selectedMetric, spots.last.y)}',
+                style: TextStyle(color: Colors.white.withOpacity(0.75)),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 18),
               Expanded(
                 child: LineChart(
                   LineChartData(
                     minY: minY,
                     maxY: maxY,
-                    gridData: FlGridData(show: true, drawVerticalLine: false),
-                    borderData: FlBorderData(show: false),
-                    lineTouchData: LineTouchData(
-                      handleBuiltInTouches: true,
-                      touchTooltipData: LineTouchTooltipData(
-                        getTooltipItems: (touchedSpots) {
-                          return touchedSpots.map((spot) {
-                            final idx = spot.x.toInt();
-                            final entry = filtered[idx];
-                            final value = _metricValue(entry, _selectedMetric)!;
-                            return LineTooltipItem(
-                              '${_formatDate(entry.date)}\n${_formatMetricValue(_selectedMetric, value)}',
-                              const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            );
-                          }).toList();
-                        },
-                      ),
+                    gridData: FlGridData(
+                      show: true,
+                      horizontalInterval: (maxY - minY) / 4,
                     ),
+                    borderData: FlBorderData(show: false),
                     titlesData: FlTitlesData(
                       topTitles: const AxisTitles(
                         sideTitles: SideTitles(showTitles: false),
@@ -449,14 +408,16 @@ class _ProgressScreenState extends State<ProgressScreen> {
                       leftTitles: AxisTitles(
                         sideTitles: SideTitles(
                           showTitles: true,
-                          reservedSize: 44,
-                          interval: 1,
+                          reservedSize: 48,
                           getTitlesWidget: (value, meta) {
-                            return Text(
-                              value.toStringAsFixed(0),
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.white.withOpacity(0.70),
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: Text(
+                                _formatDouble(value),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.white.withOpacity(0.70),
+                                ),
                               ),
                             );
                           },
@@ -489,6 +450,21 @@ class _ProgressScreenState extends State<ProgressScreen> {
                             );
                           },
                         ),
+                      ),
+                    ),
+                    lineTouchData: LineTouchData(
+                      touchTooltipData: LineTouchTooltipData(
+                        getTooltipItems: (spots) {
+                          return spots.map((spot) {
+                            return LineTooltipItem(
+                              _formatMetricValue(_selectedMetric, spot.y),
+                              const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            );
+                          }).toList();
+                        },
                       ),
                     ),
                     lineBarsData: [
@@ -602,8 +578,10 @@ class _ProgressScreenState extends State<ProgressScreen> {
 
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Hora del recordatorio actualizada'),
+          SnackBar(
+            content: Text(
+              'Recordatorio cambiado a ${_formatTime(picked.hour, picked.minute)}',
+            ),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -611,7 +589,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('No se pudo actualizar: $e'),
+            content: Text('No se pudo actualizar el recordatorio: $e'),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -622,70 +600,55 @@ class _ProgressScreenState extends State<ProgressScreen> {
   }
 
   Future<void> _toggleReminder() async {
-    if (kIsWeb) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Las notificaciones no están disponibles en web'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
     try {
       if (_reminderSettings.enabled) {
         await NotificationService.cancelWeeklyWeightReminder();
-
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Recordatorio desactivado'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
       } else {
         await NotificationService.scheduleWeeklyWeightReminder(
           hour: _reminderSettings.hour,
           minute: _reminderSettings.minute,
         );
-
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Recordatorio activado para los lunes a las ${_formatTime(_reminderSettings.hour, _reminderSettings.minute)}',
-            ),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
       }
+
+      await _refresh();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _reminderSettings.enabled
+                ? 'Recordatorio desactivado'
+                : 'Recordatorio activado',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('No se pudo activar: $e'),
+          content: Text('No se pudo cambiar el recordatorio: $e'),
           behavior: SnackBarBehavior.floating,
         ),
       );
     }
-
-    await _refresh();
   }
 
   Future<void> _showEditProfileDialog() async {
     final aliasController = TextEditingController(text: _profile.alias);
     final heightController = TextEditingController(
-      text: _profile.heightCm?.toString() ?? '',
+      text: _profile.heightCm != null ? _formatDouble(_profile.heightCm!) : '',
     );
     final targetWeightController = TextEditingController(
-      text: _profile.targetWeight?.toString() ?? '',
+      text: _profile.targetWeight != null
+          ? _formatDouble(_profile.targetWeight!)
+          : '',
     );
     final ageController = TextEditingController(
-      text: _profile.age?.toString() ?? '',
+      text: _profile.age != null ? '${_profile.age}' : '',
     );
 
     String selectedGoal = _profile.goal;
-    const goals = ['Volumen', 'Definición', 'Mantenimiento'];
 
     await showDialog<void>(
       context: context,
@@ -700,21 +663,29 @@ class _ProgressScreenState extends State<ProgressScreen> {
                   children: [
                     TextField(
                       controller: aliasController,
-                      decoration: const InputDecoration(
-                        labelText: 'Nombre o alias',
-                      ),
+                      decoration: const InputDecoration(labelText: 'Alias'),
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
                       value: selectedGoal,
-                      items: goals
-                          .map(
-                            (goal) => DropdownMenuItem(
-                              value: goal,
-                              child: Text(goal),
-                            ),
-                          )
-                          .toList(),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'Mantenimiento',
+                          child: Text('Mantenimiento'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Bajar grasa',
+                          child: Text('Bajar grasa'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Subir masa',
+                          child: Text('Subir masa'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Definición',
+                          child: Text('Definición'),
+                        ),
+                      ],
                       onChanged: (value) {
                         if (value == null) return;
                         setDialogState(() {
@@ -730,7 +701,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                         decimal: true,
                       ),
                       decoration: const InputDecoration(
-                        labelText: 'Altura (cm) - opcional',
+                        labelText: 'Altura (cm) · opcional',
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -740,7 +711,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                         decimal: true,
                       ),
                       decoration: const InputDecoration(
-                        labelText: 'Peso objetivo (kg) - opcional',
+                        labelText: 'Peso objetivo (kg) · opcional',
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -748,7 +719,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                       controller: ageController,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
-                        labelText: 'Edad - opcional',
+                        labelText: 'Edad · opcional',
                       ),
                     ),
                   ],
@@ -761,31 +732,33 @@ class _ProgressScreenState extends State<ProgressScreen> {
                 ),
                 FilledButton(
                   onPressed: () async {
-                    double? parseOptionalDouble(String text) {
-                      final value = text.trim();
-                      if (value.isEmpty) return null;
-                      return double.tryParse(value.replaceAll(',', '.'));
+                    double? parseOptionalDouble(
+                      TextEditingController controller,
+                    ) {
+                      final text = controller.text.trim();
+                      if (text.isEmpty) return null;
+                      return double.tryParse(text.replaceAll(',', '.'));
                     }
 
-                    int? parseOptionalInt(String text) {
-                      final value = text.trim();
-                      if (value.isEmpty) return null;
-                      return int.tryParse(value);
+                    int? parseOptionalInt(TextEditingController controller) {
+                      final text = controller.text.trim();
+                      if (text.isEmpty) return null;
+                      return int.tryParse(text);
                     }
 
-                    final profile = BodyProfile(
-                      alias: aliasController.text.trim().isEmpty
-                          ? 'Usuario'
-                          : aliasController.text.trim(),
+                    final alias = aliasController.text.trim().isEmpty
+                        ? 'Usuario'
+                        : aliasController.text.trim();
+
+                    final newProfile = BodyProfile(
+                      alias: alias,
                       goal: selectedGoal,
-                      heightCm: parseOptionalDouble(heightController.text),
-                      targetWeight: parseOptionalDouble(
-                        targetWeightController.text,
-                      ),
-                      age: parseOptionalInt(ageController.text),
+                      heightCm: parseOptionalDouble(heightController),
+                      targetWeight: parseOptionalDouble(targetWeightController),
+                      age: parseOptionalInt(ageController),
                     );
 
-                    await BodyProfileStorage.saveProfile(profile);
+                    await _progressService.saveProfile(newProfile);
 
                     if (!mounted) return;
                     Navigator.pop(context);
@@ -794,7 +767,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                     if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Perfil guardado'),
+                        content: Text('Perfil actualizado'),
                         behavior: SnackBarBehavior.floating,
                       ),
                     );
@@ -807,6 +780,11 @@ class _ProgressScreenState extends State<ProgressScreen> {
         );
       },
     );
+
+    aliasController.dispose();
+    heightController.dispose();
+    targetWeightController.dispose();
+    ageController.dispose();
   }
 
   Future<void> _showAddEntryDialog() async {
@@ -824,36 +802,38 @@ class _ProgressScreenState extends State<ProgressScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
+            Future<void> pickDate() async {
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: selectedDate,
+                firstDate: DateTime(2020),
+                lastDate: DateTime.now(),
+              );
+
+              if (picked != null) {
+                setDialogState(() {
+                  selectedDate = picked;
+                });
+              }
+            }
+
             return AlertDialog(
-              title: const Text('Nuevo registro'),
+              title: const Text('Nuevo registro corporal'),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     InkWell(
-                      onTap: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: selectedDate,
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime(2100),
-                        );
-
-                        if (picked != null) {
-                          setDialogState(() {
-                            selectedDate = picked;
-                          });
-                        }
-                      },
+                      onTap: pickDate,
                       borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(12),
+                      child: InputDecorator(
+                        decoration: const InputDecoration(labelText: 'Fecha'),
+                        child: Row(
+                          children: [
+                            Expanded(child: Text(_formatDate(selectedDate))),
+                            const Icon(Icons.calendar_today_rounded, size: 18),
+                          ],
                         ),
-                        child: Text('Fecha: ${_formatDate(selectedDate)}'),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -864,7 +844,6 @@ class _ProgressScreenState extends State<ProgressScreen> {
                       ),
                       decoration: const InputDecoration(
                         labelText: 'Peso (kg) *',
-                        hintText: 'Ejemplo: 78.4',
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -874,7 +853,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                         decimal: true,
                       ),
                       decoration: const InputDecoration(
-                        labelText: 'Cintura (cm) - opcional',
+                        labelText: 'Cintura (cm)',
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -884,7 +863,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                         decimal: true,
                       ),
                       decoration: const InputDecoration(
-                        labelText: 'Pecho (cm) - opcional',
+                        labelText: 'Pecho (cm)',
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -894,7 +873,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                         decimal: true,
                       ),
                       decoration: const InputDecoration(
-                        labelText: 'Brazo (cm) - opcional',
+                        labelText: 'Brazo (cm)',
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -904,7 +883,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                         decimal: true,
                       ),
                       decoration: const InputDecoration(
-                        labelText: 'Pierna (cm) - opcional',
+                        labelText: 'Pierna (cm)',
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -913,9 +892,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
-                      decoration: const InputDecoration(
-                        labelText: '% grasa - opcional',
-                      ),
+                      decoration: const InputDecoration(labelText: '% Grasa'),
                     ),
                   ],
                 ),
@@ -952,7 +929,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                       bodyFat: parseOptional(bodyFatController),
                     );
 
-                    await BodyProgressStorage.saveEntry(entry);
+                    await _progressService.saveEntry(entry);
 
                     if (!mounted) return;
                     Navigator.pop(context);
@@ -974,6 +951,13 @@ class _ProgressScreenState extends State<ProgressScreen> {
         );
       },
     );
+
+    weightController.dispose();
+    waistController.dispose();
+    chestController.dispose();
+    armController.dispose();
+    thighController.dispose();
+    bodyFatController.dispose();
   }
 
   Future<void> _clearAllEntries() async {
@@ -1000,7 +984,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
     );
 
     if (confirmed == true) {
-      await BodyProgressStorage.clearAllEntries();
+      await _progressService.clearAllEntries();
       await _refresh();
 
       if (!mounted) return;

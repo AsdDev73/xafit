@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../data/body_profile_storage.dart';
-import '../data/body_progress_storage.dart';
 import '../data/exercise_catalog.dart';
-import '../data/workout_storage.dart';
-import '../models/body_profile.dart';
-import '../models/body_progress_entry.dart';
 import '../models/workout_session.dart';
+import '../services/app_repositories.dart';
+import '../services/dashboard_service.dart';
 import 'workout_detail_screen.dart';
 import 'workout_screen.dart';
 
@@ -20,8 +17,14 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final DashboardService _dashboardService = DashboardService(
+    workoutRepository: AppRepositories.workouts,
+    bodyProfileRepository: AppRepositories.bodyProfile,
+    bodyProgressRepository: AppRepositories.bodyProgress,
+  );
+
   bool _isLoading = true;
-  _HomeDashboardData _dashboard = const _HomeDashboardData.empty();
+  DashboardOverview _dashboard = const DashboardOverview.empty();
 
   @override
   void initState() {
@@ -43,139 +46,14 @@ class _HomeScreenState extends State<HomeScreen> {
       _isLoading = true;
     });
 
-    final sessions = await WorkoutStorage.loadSessions();
-    final progressEntries = await BodyProgressStorage.loadEntries();
-    final profile = await BodyProfileStorage.loadProfile();
-
-    final now = DateTime.now();
-    final startOfWeek = DateTime(
-      now.year,
-      now.month,
-      now.day,
-    ).subtract(Duration(days: now.weekday - 1));
-
-    final sessionsThisWeek = sessions.where((session) {
-      final sessionDate = DateTime(
-        session.startedAt.year,
-        session.startedAt.month,
-        session.startedAt.day,
-      );
-      return !sessionDate.isBefore(startOfWeek);
-    }).toList();
-
-    double weeklyVolume = 0;
-    for (final session in sessionsThisWeek) {
-      weeklyVolume += session.totalVolume;
-    }
-
-    final currentWeight = progressEntries.isNotEmpty
-        ? progressEntries.first.weight
-        : null;
-
-    final activities = _buildRecentActivities(
-      sessions: sessions,
-      progressEntries: progressEntries,
-      profile: profile,
-      weeklySessions: sessionsThisWeek.length,
-      weeklyVolume: weeklyVolume,
-    );
+    final overview = await _dashboardService.loadOverview();
 
     if (!mounted) return;
 
     setState(() {
-      _dashboard = _HomeDashboardData(
-        totalSessions: sessions.length,
-        weeklySessions: sessionsThisWeek.length,
-        weeklyVolume: weeklyVolume,
-        currentWeight: currentWeight,
-        lastSession: sessions.isNotEmpty ? sessions.first : null,
-        latestProgressEntry: progressEntries.isNotEmpty
-            ? progressEntries.first
-            : null,
-        profile: profile,
-        recentActivities: activities,
-      );
+      _dashboard = overview;
       _isLoading = false;
     });
-  }
-
-  List<_RecentActivityItem> _buildRecentActivities({
-    required List<WorkoutSession> sessions,
-    required List<BodyProgressEntry> progressEntries,
-    required BodyProfile profile,
-    required int weeklySessions,
-    required double weeklyVolume,
-  }) {
-    final List<_RecentActivityItem> items = [];
-
-    if (sessions.isNotEmpty) {
-      final lastSession = sessions.first;
-      items.add(
-        _RecentActivityItem(
-          icon: Icons.fitness_center_rounded,
-          title: 'Último entrenamiento guardado',
-          subtitle:
-              '${lastSession.routineName} • ${lastSession.totalExercises} ejercicios • ${lastSession.totalSets} series',
-          accentColor: const Color(0xFF4FC3F7),
-        ),
-      );
-    }
-
-    if (progressEntries.isNotEmpty) {
-      final latest = progressEntries.first;
-
-      String metricsText = 'Peso ${_formatStaticWeight(latest.weight)} kg';
-
-      if (latest.bodyFat != null) {
-        metricsText += ' • ${_formatStaticWeight(latest.bodyFat!)}% grasa';
-      } else if (latest.waist != null) {
-        metricsText += ' • cintura ${_formatStaticWeight(latest.waist!)} cm';
-      }
-
-      items.add(
-        _RecentActivityItem(
-          icon: Icons.monitor_weight_outlined,
-          title: 'Último registro corporal',
-          subtitle: metricsText,
-          accentColor: const Color(0xFF4ADE80),
-        ),
-      );
-    }
-
-    if (weeklySessions > 0) {
-      items.add(
-        _RecentActivityItem(
-          icon: Icons.insights_rounded,
-          title: 'Resumen de esta semana',
-          subtitle:
-              '$weeklySessions entrenos • ${_formatStaticWeight(weeklyVolume)} kg de volumen',
-          accentColor: const Color(0xFFFBBF24),
-        ),
-      );
-    } else {
-      items.add(
-        const _RecentActivityItem(
-          icon: Icons.calendar_today_rounded,
-          title: 'Semana todavía vacía',
-          subtitle: 'Aún no has registrado entrenamientos esta semana.',
-          accentColor: Color(0xFFFBBF24),
-        ),
-      );
-    }
-
-    if (items.isEmpty) {
-      items.add(
-        _RecentActivityItem(
-          icon: Icons.rocket_launch_rounded,
-          title: 'Empieza a construir tu historial',
-          subtitle:
-              'Guarda tu primer entrenamiento y tu primer registro corporal.',
-          accentColor: Colors.white70,
-        ),
-      );
-    }
-
-    return items.take(3).toList();
   }
 
   Future<void> _openAndRefresh(Widget screen) async {
@@ -197,13 +75,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _formatWeight(double value) {
-    if (value == value.roundToDouble()) {
-      return value.toStringAsFixed(0);
-    }
-    return value.toStringAsFixed(1);
-  }
-
-  static String _formatStaticWeight(double value) {
     if (value == value.roundToDouble()) {
       return value.toStringAsFixed(0);
     }
@@ -514,10 +385,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       width: 42,
                       height: 42,
                       decoration: BoxDecoration(
-                        color: item.accentColor.withOpacity(0.14),
+                        color: Colors.white.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: Icon(item.icon, size: 20, color: item.accentColor),
+                      child: const Icon(
+                        Icons.bolt_rounded,
+                        size: 20,
+                        color: Colors.white70,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -725,7 +600,8 @@ class _HomeScreenState extends State<HomeScreen> {
         ? '${_formatWeight(_dashboard.currentWeight!)} kg'
         : '--';
 
-    final weeklyVolume = '${_formatWeight(_dashboard.weeklyVolume)} kg';
+    final weeklyVolume =
+        '${DashboardService.formatNumber(_dashboard.weeklyVolume)} kg';
 
     return Scaffold(
       appBar: AppBar(
@@ -794,50 +670,4 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
     );
   }
-}
-
-class _HomeDashboardData {
-  final int totalSessions;
-  final int weeklySessions;
-  final double weeklyVolume;
-  final double? currentWeight;
-  final WorkoutSession? lastSession;
-  final BodyProgressEntry? latestProgressEntry;
-  final BodyProfile profile;
-  final List<_RecentActivityItem> recentActivities;
-
-  const _HomeDashboardData({
-    required this.totalSessions,
-    required this.weeklySessions,
-    required this.weeklyVolume,
-    required this.currentWeight,
-    required this.lastSession,
-    required this.latestProgressEntry,
-    required this.profile,
-    required this.recentActivities,
-  });
-
-  const _HomeDashboardData.empty()
-    : totalSessions = 0,
-      weeklySessions = 0,
-      weeklyVolume = 0,
-      currentWeight = null,
-      lastSession = null,
-      latestProgressEntry = null,
-      profile = BodyProfile.empty,
-      recentActivities = const [];
-}
-
-class _RecentActivityItem {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Color accentColor;
-
-  const _RecentActivityItem({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.accentColor,
-  });
 }

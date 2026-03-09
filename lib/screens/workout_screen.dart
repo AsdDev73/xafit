@@ -2,9 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../data/workout_storage.dart';
 import '../models/exercise.dart';
 import '../models/workout_session.dart';
+import '../repositories/workout_repository.dart';
+import '../services/app_repositories.dart';
 
 class WorkoutScreen extends StatefulWidget {
   final String title;
@@ -26,6 +27,8 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   static const Color _accentColor = Color(0xFF4FC3F7);
   static const Color _successColor = Color(0xFF4ADE80);
   static const Color _warningColor = Color(0xFFFBBF24);
+
+  final WorkoutRepository _workoutRepository = AppRepositories.workouts;
 
   final List<_WorkoutExerciseEntry> _selectedExercises = [];
   Map<String, ExercisePerformanceSnapshot> _exerciseSnapshots = {};
@@ -55,7 +58,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   }
 
   Future<void> _loadExerciseSnapshots() async {
-    final snapshots = await WorkoutStorage.loadExerciseSnapshots();
+    final snapshots = await _workoutRepository.getExerciseSnapshots();
 
     if (!mounted) return;
 
@@ -1109,7 +1112,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     });
 
     try {
-      await WorkoutStorage.saveSession(session);
+      await _workoutRepository.saveSession(session);
 
       if (!mounted) return;
       Navigator.pop(context, true);

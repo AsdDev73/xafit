@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../data/workout_storage.dart';
 import '../models/workout_session.dart';
+import '../repositories/workout_repository.dart';
+import '../services/app_repositories.dart';
 import 'workout_detail_screen.dart';
 
 enum _HistoryDateFilter { all, last7Days, last30Days, last90Days, thisYear }
@@ -16,6 +17,7 @@ class HistoryScreen extends StatefulWidget {
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
+  final WorkoutRepository _workoutRepository = AppRepositories.workouts;
   final TextEditingController _searchController = TextEditingController();
 
   bool _isLoading = true;
@@ -55,7 +57,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       _isLoading = true;
     });
 
-    final sessions = await WorkoutStorage.loadSessions();
+    final sessions = await _workoutRepository.getAllSessions();
 
     if (!mounted) return;
 
@@ -256,7 +258,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
     if (confirmed != true) return;
 
-    await WorkoutStorage.clearAllSessions();
+    await _workoutRepository.clearAllSessions();
     await _refresh();
 
     if (!mounted) return;

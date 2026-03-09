@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 
-import '../data/workout_storage.dart';
 import '../models/workout_session.dart';
+import '../repositories/workout_repository.dart';
+import '../services/app_repositories.dart';
 
 class WorkoutDetailScreen extends StatelessWidget {
   final WorkoutSession session;
 
-  const WorkoutDetailScreen({super.key, required this.session});
+  WorkoutDetailScreen({super.key, required this.session});
+
+  final WorkoutRepository _workoutRepository = AppRepositories.workouts;
 
   String _formatDate(DateTime date) {
     final day = date.day.toString().padLeft(2, '0');
@@ -53,6 +56,28 @@ class WorkoutDetailScreen extends StatelessWidget {
     return '${minutes}m ${remainingSeconds}s';
   }
 
+  String _displayTag(String tag) {
+    switch (tag) {
+      case 'pecho':
+        return 'Pecho';
+      case 'espalda':
+        return 'Espalda';
+      case 'hombro':
+        return 'Hombro';
+      case 'biceps':
+        return 'Bíceps';
+      case 'triceps':
+        return 'Tríceps';
+      case 'pierna':
+        return 'Pierna';
+      case 'abdomen':
+        return 'Abdomen';
+      default:
+        if (tag.isEmpty) return tag;
+        return tag[0].toUpperCase() + tag.substring(1);
+    }
+  }
+
   double _exerciseVolume(WorkoutExerciseRecord exercise) {
     return exercise.sets.fold<double>(
       0,
@@ -87,7 +112,7 @@ class WorkoutDetailScreen extends StatelessWidget {
 
     if (!confirmed) return;
 
-    await WorkoutStorage.deleteSession(session.id);
+    await _workoutRepository.deleteSession(session.id);
 
     if (!context.mounted) return;
     Navigator.pop(context, true);
@@ -257,6 +282,16 @@ class WorkoutDetailScreen extends StatelessWidget {
                     color: Colors.white.withOpacity(0.90),
                   ),
                 ),
+                if (session.sessionTags.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: session.sessionTags
+                        .map((tag) => _buildTag(_displayTag(tag)))
+                        .toList(),
+                  ),
+                ],
                 const SizedBox(height: 18),
                 Row(
                   children: [
