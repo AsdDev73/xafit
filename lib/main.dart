@@ -18,6 +18,8 @@ Future<void> main() async {
       driftBodyProfileRepository: AppRepositories.driftBodyProfile,
       legacyBodyProgressRepository: AppRepositories.legacyBodyProgress,
       driftBodyProgressRepository: AppRepositories.driftBodyProgress,
+      legacyCustomExerciseRepository: AppRepositories.legacyCustomExercises,
+      driftCustomExerciseRepository: AppRepositories.driftCustomExercises,
     ).migrateAllIfNeeded();
   }
 

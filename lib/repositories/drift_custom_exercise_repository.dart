@@ -53,6 +53,10 @@ class DriftCustomExerciseRepository implements CustomExerciseRepository {
 
   @override
   Future<void> saveCustomExercise(Exercise exercise) async {
+    final existing = await (db.select(
+      db.customExercises,
+    )..where((tbl) => tbl.id.equals(exercise.id))).getSingleOrNull();
+
     await db
         .into(db.customExercises)
         .insertOnConflictUpdate(
@@ -61,7 +65,7 @@ class DriftCustomExerciseRepository implements CustomExerciseRepository {
             name: exercise.name,
             muscleGroup: exercise.muscleGroup,
             tagsJson: Value(jsonEncode(exercise.tags)),
-            createdAt: DateTime.now(),
+            createdAt: existing?.createdAt ?? DateTime.now(),
           ),
         );
   }
@@ -75,9 +79,11 @@ class DriftCustomExerciseRepository implements CustomExerciseRepository {
 
   List<String> _decodeStringList(String rawJson) {
     final decoded = jsonDecode(rawJson);
+
     if (decoded is List) {
       return decoded.map((e) => e.toString()).toList();
     }
+
     return [];
   }
 }

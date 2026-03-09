@@ -1,15 +1,21 @@
 import '../models/body_profile.dart';
 import '../repositories/body_profile_repository.dart';
 import '../repositories/body_progress_repository.dart';
+import '../repositories/custom_exercise_repository.dart';
 import '../repositories/workout_repository.dart';
 
 class DataMigrationService {
   final WorkoutRepository legacyWorkoutRepository;
   final WorkoutRepository driftWorkoutRepository;
+
   final BodyProfileRepository legacyBodyProfileRepository;
   final BodyProfileRepository driftBodyProfileRepository;
+
   final BodyProgressRepository legacyBodyProgressRepository;
   final BodyProgressRepository driftBodyProgressRepository;
+
+  final CustomExerciseRepository legacyCustomExerciseRepository;
+  final CustomExerciseRepository driftCustomExerciseRepository;
 
   const DataMigrationService({
     required this.legacyWorkoutRepository,
@@ -18,12 +24,15 @@ class DataMigrationService {
     required this.driftBodyProfileRepository,
     required this.legacyBodyProgressRepository,
     required this.driftBodyProgressRepository,
+    required this.legacyCustomExerciseRepository,
+    required this.driftCustomExerciseRepository,
   });
 
   Future<void> migrateAllIfNeeded() async {
     await _migrateWorkoutsIfNeeded();
     await _migrateBodyProfileIfNeeded();
     await _migrateBodyProgressIfNeeded();
+    await _migrateCustomExercisesIfNeeded();
   }
 
   Future<void> _migrateWorkoutsIfNeeded() async {
@@ -57,6 +66,20 @@ class DataMigrationService {
 
     for (final entry in legacyEntries) {
       await driftBodyProgressRepository.saveEntry(entry);
+    }
+  }
+
+  Future<void> _migrateCustomExercisesIfNeeded() async {
+    final driftExercises = await driftCustomExerciseRepository
+        .getAllCustomExercises();
+    if (driftExercises.isNotEmpty) return;
+
+    final legacyExercises = await legacyCustomExerciseRepository
+        .getAllCustomExercises();
+    if (legacyExercises.isEmpty) return;
+
+    for (final exercise in legacyExercises) {
+      await driftCustomExerciseRepository.saveCustomExercise(exercise);
     }
   }
 

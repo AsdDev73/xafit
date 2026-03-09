@@ -36,7 +36,7 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
     final tags = <String>{};
 
     for (final exercise in _allExercises) {
-      tags.addAll(exercise.tags);
+      tags.addAll(exercise.tags.map((tag) => tag.toString()));
     }
 
     final result = tags.toList()..sort();
@@ -50,10 +50,13 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
       final matchesSearch =
           query.isEmpty ||
           exercise.name.toLowerCase().contains(query) ||
-          exercise.tags.any((tag) => tag.toLowerCase().contains(query));
+          exercise.tags.any(
+            (tag) => tag.toString().toLowerCase().contains(query),
+          );
 
       final matchesTag =
-          _selectedTag == null || exercise.tags.contains(_selectedTag);
+          _selectedTag == null ||
+          exercise.tags.map((tag) => tag.toString()).contains(_selectedTag);
 
       return matchesSearch && matchesTag;
     }).toList();
@@ -80,90 +83,58 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
     });
   }
 
-  Future<void> _addCustomExercise() async {
-    final nameController = TextEditingController();
-    final tagsController = TextEditingController();
-
-    final result = await showDialog<Exercise>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Añadir ejercicio personalizado'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                autofocus: true,
-                decoration: const InputDecoration(
-                  labelText: 'Nombre',
-                  hintText: 'Ejemplo: Press convergente',
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: tagsController,
-                decoration: const InputDecoration(
-                  labelText: 'Tags',
-                  hintText: 'Ejemplo: maquina, compuesto, pecho superior',
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () {
-                final name = nameController.text.trim();
-                final rawTags = tagsController.text.trim();
-
-                if (name.isEmpty) return;
-
-                final tags = rawTags.isEmpty
-                    ? ['personalizado']
-                    : rawTags
-                          .split(',')
-                          .map((tag) => tag.trim().toLowerCase())
-                          .where((tag) => tag.isNotEmpty)
-                          .toList();
-
-                Navigator.pop(
-                  context,
-                  Exercise(
-                    id: DateTime.now().millisecondsSinceEpoch.toString(),
-                    name: name,
-                    muscleGroup: widget.routine.muscleGroup,
-                    tags: tags,
-                    isCustom: true,
-                  ),
-                );
-              },
-              child: const Text('Añadir'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (result != null) {
-      await _customExerciseRepository.saveCustomExercise(result);
-      await _loadCustomExercises();
-
+  void _showFloatingSnackBar(String message) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${result.name} añadido a ${widget.routine.name}'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      if (messenger == null) return;
 
-    nameController.dispose();
-    tagsController.dispose();
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+      );
+    });
+  }
+
+  Future<void> _addCustomExercise() async {
+    final result = await _showCustomExerciseDialog();
+
+    if (result == null) return;
+
+    await _customExerciseRepository.saveCustomExercise(result);
+    await _loadCustomExercises();
+
+    if (!mounted) return;
+    _showFloatingSnackBar('${result.name} añadido a ${widget.routine.name}');
+  }
+
+  Future<void> _editCustomExercise(Exercise exercise) async {
+    final result = await _showCustomExerciseDialog(existing: exercise);
+
+    if (result == null) return;
+
+    await _customExerciseRepository.saveCustomExercise(result);
+    await _loadCustomExercises();
+
+    if (!mounted) return;
+    _showFloatingSnackBar('${result.name} actualizado');
+  }
+
+  Future<Exercise?> _showCustomExerciseDialog({Exercise? existing}) async {
+    final existingNames = _allExercises
+        .where((exercise) => exercise.id != existing?.id)
+        .map((exercise) => exercise.name.trim().toLowerCase())
+        .toSet();
+
+    return showDialog<Exercise>(
+      context: context,
+      builder: (_) => _CustomExerciseDialog(
+        muscleGroup: widget.routine.muscleGroup,
+        existing: existing,
+        existingNames: existingNames,
+      ),
+    );
   }
 
   Future<void> _deleteCustomExercise(Exercise exercise) async {
@@ -174,15 +145,16 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
             return AlertDialog(
               title: const Text('Eliminar ejercicio personalizado'),
               content: Text(
-                'Se eliminará ${exercise.name} de tu biblioteca personalizada.',
+                'Se eliminará ${exercise.name} de tu biblioteca personalizada.\n\n'
+                'Los entrenamientos ya guardados no se borrarán.',
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context, false),
+                  onPressed: () => Navigator.of(context).pop(false),
                   child: const Text('Cancelar'),
                 ),
                 FilledButton(
-                  onPressed: () => Navigator.pop(context, true),
+                  onPressed: () => Navigator.of(context).pop(true),
                   child: const Text('Eliminar'),
                 ),
               ],
@@ -197,13 +169,7 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
     await _loadCustomExercises();
 
     if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${exercise.name} eliminado'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    _showFloatingSnackBar('${exercise.name} eliminado');
   }
 
   Widget _buildTagChip(String tag) {
@@ -254,6 +220,8 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
                 spacing: 6,
                 runSpacing: 6,
                 children: exercise.tags.take(4).map((tag) {
+                  final label = tag.toString();
+
                   return Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
@@ -263,7 +231,7 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
                       color: Colors.white.withOpacity(0.06),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Text(tag, style: const TextStyle(fontSize: 11)),
+                    child: Text(label, style: const TextStyle(fontSize: 11)),
                   );
                 }).toList(),
               ),
@@ -293,6 +261,11 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
             ),
             if (exercise.isCustom) ...[
               const SizedBox(width: 6),
+              IconButton(
+                tooltip: 'Editar personalizado',
+                onPressed: () => _editCustomExercise(exercise),
+                icon: const Icon(Icons.edit_outlined),
+              ),
               IconButton(
                 tooltip: 'Eliminar personalizado',
                 onPressed: () => _deleteCustomExercise(exercise),
@@ -459,6 +432,153 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
                 ],
               ),
             ),
+    );
+  }
+}
+
+class _CustomExerciseDialog extends StatefulWidget {
+  final String muscleGroup;
+  final Exercise? existing;
+  final Set<String> existingNames;
+
+  const _CustomExerciseDialog({
+    required this.muscleGroup,
+    required this.existing,
+    required this.existingNames,
+  });
+
+  @override
+  State<_CustomExerciseDialog> createState() => _CustomExerciseDialogState();
+}
+
+class _CustomExerciseDialogState extends State<_CustomExerciseDialog> {
+  late final TextEditingController _nameController;
+  late final TextEditingController _tagsController;
+
+  String? _errorText;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.existing?.name ?? '');
+    _tagsController = TextEditingController(
+      text: widget.existing == null
+          ? ''
+          : widget.existing!.tags.map((tag) => tag.toString()).join(', '),
+    );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _tagsController.dispose();
+    super.dispose();
+  }
+
+  List<String> _parseTags(String rawTags) {
+    final tags =
+        rawTags
+            .split(',')
+            .map((tag) => tag.trim().toLowerCase())
+            .where((tag) => tag.isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
+
+    if (tags.isEmpty) {
+      return ['personalizado'];
+    }
+
+    return tags;
+  }
+
+  void _save() {
+    FocusScope.of(context).unfocus();
+
+    final name = _nameController.text.trim();
+    final normalizedName = name.toLowerCase();
+
+    if (name.isEmpty) {
+      setState(() {
+        _errorText = 'Escribe un nombre para el ejercicio';
+      });
+      return;
+    }
+
+    if (widget.existingNames.contains(normalizedName)) {
+      setState(() {
+        _errorText = 'Ya existe un ejercicio con ese nombre';
+      });
+      return;
+    }
+
+    final exercise = Exercise(
+      id:
+          widget.existing?.id ??
+          DateTime.now().millisecondsSinceEpoch.toString(),
+      name: name,
+      muscleGroup: widget.muscleGroup,
+      tags: _parseTags(_tagsController.text),
+      isCustom: true,
+    );
+
+    Navigator.of(context).pop(exercise);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isEditing = widget.existing != null;
+
+    return AlertDialog(
+      title: Text(
+        isEditing
+            ? 'Editar ejercicio personalizado'
+            : 'Añadir ejercicio personalizado',
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _nameController,
+              autofocus: true,
+              textInputAction: TextInputAction.next,
+              decoration: InputDecoration(
+                labelText: 'Nombre',
+                hintText: 'Ejemplo: Press convergente',
+                errorText: _errorText,
+              ),
+              onChanged: (_) {
+                if (_errorText != null) {
+                  setState(() {
+                    _errorText = null;
+                  });
+                }
+              },
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _tagsController,
+              textInputAction: TextInputAction.done,
+              decoration: const InputDecoration(
+                labelText: 'Tags',
+                hintText: 'Ejemplo: maquina, compuesto, pecho superior',
+              ),
+              onSubmitted: (_) => _save(),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: _save,
+          child: Text(isEditing ? 'Guardar' : 'Añadir'),
+        ),
+      ],
     );
   }
 }
