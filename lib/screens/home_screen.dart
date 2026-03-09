@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../data/exercise_catalog.dart';
-import '../models/workout_session.dart';
 import '../services/app_repositories.dart';
 import '../services/dashboard_service.dart';
 import 'workout_detail_screen.dart';
