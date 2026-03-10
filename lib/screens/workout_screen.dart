@@ -247,9 +247,17 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      if (messenger == null) return;
+
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+      );
+    });
   }
 
   void _restartRestStopwatch() {
@@ -869,6 +877,8 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                         Expanded(
                           child: FilledButton(
                             onPressed: () {
+                              FocusScope.of(sheetContext).unfocus();
+
                               final weight = double.tryParse(
                                 weightController.text.trim().replaceAll(
                                   ',',

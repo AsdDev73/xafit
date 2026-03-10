@@ -40,6 +40,9 @@ dependencies:
   drift_flutter: ^0.3.0
   path_provider: ^2.1.5
 
+  file_picker: ^8.1.2
+  share_plus: ^10.0.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
