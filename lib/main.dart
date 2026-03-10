@@ -11,16 +11,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   if (!kIsWeb) {
-    await DataMigrationService(
-      legacyWorkoutRepository: AppRepositories.legacyWorkouts,
-      driftWorkoutRepository: AppRepositories.driftWorkouts,
-      legacyBodyProfileRepository: AppRepositories.legacyBodyProfile,
-      driftBodyProfileRepository: AppRepositories.driftBodyProfile,
-      legacyBodyProgressRepository: AppRepositories.legacyBodyProgress,
-      driftBodyProgressRepository: AppRepositories.driftBodyProgress,
-      legacyCustomExerciseRepository: AppRepositories.legacyCustomExercises,
-      driftCustomExerciseRepository: AppRepositories.driftCustomExercises,
-    ).migrateAllIfNeeded();
+    await AppRepositories.dataMigrationService.migrateAllIfNeeded();
   }
 
   runApp(const XaFitApp());

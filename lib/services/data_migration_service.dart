@@ -1,3 +1,5 @@
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../models/body_profile.dart';
 import '../repositories/body_profile_repository.dart';
 import '../repositories/body_progress_repository.dart';
@@ -5,6 +7,8 @@ import '../repositories/custom_exercise_repository.dart';
 import '../repositories/workout_repository.dart';
 
 class DataMigrationService {
+  static const String _migrationDoneKey = 'xafit_mobile_migration_v1_done';
+
   final WorkoutRepository legacyWorkoutRepository;
   final WorkoutRepository driftWorkoutRepository;
 
@@ -29,10 +33,17 @@ class DataMigrationService {
   });
 
   Future<void> migrateAllIfNeeded() async {
+    final prefs = await SharedPreferences.getInstance();
+    final alreadyMigrated = prefs.getBool(_migrationDoneKey) ?? false;
+
+    if (alreadyMigrated) return;
+
     await _migrateWorkoutsIfNeeded();
     await _migrateBodyProfileIfNeeded();
     await _migrateBodyProgressIfNeeded();
     await _migrateCustomExercisesIfNeeded();
+
+    await prefs.setBool(_migrationDoneKey, true);
   }
 
   Future<void> _migrateWorkoutsIfNeeded() async {

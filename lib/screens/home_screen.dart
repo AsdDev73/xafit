@@ -16,11 +16,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final DashboardService _dashboardService = DashboardService(
-    workoutRepository: AppRepositories.workouts,
-    bodyProfileRepository: AppRepositories.bodyProfile,
-    bodyProgressRepository: AppRepositories.bodyProgress,
-  );
+  final DashboardService _dashboardService = AppRepositories.dashboardService;
 
   bool _isLoading = true;
   DashboardOverview _dashboard = const DashboardOverview.empty();
