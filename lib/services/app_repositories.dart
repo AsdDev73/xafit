@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import 'backup_service.dart';
+
 import '../database/app_database.dart';
 import '../repositories/body_profile_repository.dart';
 import '../repositories/body_progress_repository.dart';
@@ -77,4 +79,12 @@ class AppRepositories {
         legacyCustomExerciseRepository: legacyCustomExercises,
         driftCustomExerciseRepository: driftCustomExercises,
       );
+
+  static BackupService? _backupService;
+  static BackupService get backupService => _backupService ??= BackupService(
+    workoutRepository: workouts,
+    bodyProfileRepository: bodyProfile,
+    bodyProgressRepository: bodyProgress,
+    customExerciseRepository: customExercises,
+  );
 }

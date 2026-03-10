@@ -3,6 +3,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../services/app_repositories.dart';
 
+import 'package:share_plus/share_plus.dart';
+import '../services/app_repositories.dart';
+
 import '../models/body_profile.dart';
 import '../models/body_progress_entry.dart';
 import '../services/progress_service.dart';
@@ -61,6 +64,29 @@ class _ProgressScreenState extends State<ProgressScreen> {
         SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
       );
     });
+  }
+
+  Future<void> _exportBackup() async {
+    try {
+      final file = await AppRepositories.backupService.exportBackupToTempFile();
+
+      final result = await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Backup de XaFit',
+        subject: 'Backup de XaFit',
+      );
+
+      if (!mounted) return;
+
+      if (result.status == ShareResultStatus.success) {
+        _showFloatingSnackBar('Backup exportado');
+      } else {
+        _showFloatingSnackBar('Backup generado');
+      }
+    } catch (_) {
+      if (!mounted) return;
+      _showFloatingSnackBar('Error al exportar el backup');
+    }
   }
 
   Future<void> _showAddEntryDialog() async {
@@ -526,6 +552,11 @@ class _ProgressScreenState extends State<ProgressScreen> {
       appBar: AppBar(
         title: const Text('Progreso'),
         actions: [
+          IconButton(
+            tooltip: 'Editar perfil',
+            onPressed: _showEditProfileDialog,
+            icon: const Icon(Icons.person_outline_rounded),
+          ),
           IconButton(
             tooltip: 'Editar perfil',
             onPressed: _showEditProfileDialog,
