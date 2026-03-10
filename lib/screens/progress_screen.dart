@@ -2,7 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import '../services/app_repositories.dart';
-
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:share_plus/share_plus.dart';
 import '../services/app_repositories.dart';
 
@@ -86,6 +87,50 @@ class _ProgressScreenState extends State<ProgressScreen> {
     } catch (_) {
       if (!mounted) return;
       _showFloatingSnackBar('Error al exportar el backup');
+    }
+  }
+
+  Future<void> _importBackup() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+        allowMultiple: false,
+      );
+
+      if (result == null) {
+        if (!mounted) return;
+        _showFloatingSnackBar('Importación cancelada');
+        return;
+      }
+
+      final path = result.files.single.path;
+      if (path == null || path.isEmpty) {
+        if (!mounted) return;
+        _showFloatingSnackBar('No se pudo leer el archivo seleccionado');
+        return;
+      }
+
+      final importResult = await AppRepositories.backupService
+          .importBackupFromFile(File(path));
+
+      await _refresh();
+
+      if (!mounted) return;
+
+      _showFloatingSnackBar(
+        'Importado: '
+        '${importResult.importedSessions} sesiones, '
+        '${importResult.importedProgressEntries} registros, '
+        '${importResult.importedCustomExercises} ejercicios'
+        '${importResult.profileImported ? ', perfil incluido' : ''}',
+      );
+    } on FormatException catch (e) {
+      if (!mounted) return;
+      _showFloatingSnackBar(e.message);
+    } catch (_) {
+      if (!mounted) return;
+      _showFloatingSnackBar('Error al importar el backup');
     }
   }
 
@@ -552,6 +597,11 @@ class _ProgressScreenState extends State<ProgressScreen> {
       appBar: AppBar(
         title: const Text('Progreso'),
         actions: [
+          IconButton(
+            tooltip: 'Importar backup',
+            onPressed: _importBackup,
+            icon: const Icon(Icons.file_upload_outlined),
+          ),
           IconButton(
             tooltip: 'Exportar backup',
             onPressed: _exportBackup,
