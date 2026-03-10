@@ -553,9 +553,9 @@ class _ProgressScreenState extends State<ProgressScreen> {
         title: const Text('Progreso'),
         actions: [
           IconButton(
-            tooltip: 'Editar perfil',
-            onPressed: _showEditProfileDialog,
-            icon: const Icon(Icons.person_outline_rounded),
+            tooltip: 'Exportar backup',
+            onPressed: _exportBackup,
+            icon: const Icon(Icons.ios_share_rounded),
           ),
           IconButton(
             tooltip: 'Editar perfil',
