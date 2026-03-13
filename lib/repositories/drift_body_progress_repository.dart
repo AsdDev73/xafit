@@ -1,7 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../database/app_database.dart';
-import '../models/body_progress_entry.dart' as model;
+import '../models/body_progress_entry.dart';
 import 'body_progress_repository.dart';
 
 class DriftBodyProgressRepository implements BodyProgressRepository {
@@ -10,14 +10,14 @@ class DriftBodyProgressRepository implements BodyProgressRepository {
   DriftBodyProgressRepository(this.db);
 
   @override
-  Future<List<model.BodyProgressEntry>> getEntries() async {
+  Future<List<BodyProgressEntry>> getEntries() async {
     final rows = await (db.select(
       db.bodyProgressRecords,
     )..orderBy([(tbl) => OrderingTerm.desc(tbl.date)])).get();
 
     return rows
         .map(
-          (row) => model.BodyProgressEntry(
+          (row) => BodyProgressEntry(
             id: row.id,
             date: row.date,
             weight: row.weight,
@@ -32,7 +32,7 @@ class DriftBodyProgressRepository implements BodyProgressRepository {
   }
 
   @override
-  Future<void> saveEntry(model.BodyProgressEntry entry) async {
+  Future<void> saveEntry(BodyProgressEntry entry) async {
     await db
         .into(db.bodyProgressRecords)
         .insertOnConflictUpdate(
@@ -47,6 +47,13 @@ class DriftBodyProgressRepository implements BodyProgressRepository {
             bodyFat: Value(entry.bodyFat),
           ),
         );
+  }
+
+  @override
+  Future<void> deleteEntry(String entryId) async {
+    await (db.delete(
+      db.bodyProgressRecords,
+    )..where((tbl) => tbl.id.equals(entryId))).go();
   }
 
   @override
