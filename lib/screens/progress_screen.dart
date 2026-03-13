@@ -1,14 +1,13 @@
+import 'dart:io';
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
-import '../services/app_repositories.dart';
-import 'dart:io';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
-import '../services/app_repositories.dart';
 
 import '../models/body_profile.dart';
 import '../models/body_progress_entry.dart';
+import '../services/app_repositories.dart';
 import '../services/progress_service.dart';
 
 class ProgressScreen extends StatefulWidget {
@@ -137,7 +136,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
   Future<void> _showAddEntryDialog() async {
     final entry = await showDialog<BodyProgressEntry>(
       context: context,
-      builder: (_) => const _AddBodyProgressEntryDialog(),
+      builder: (_) => const _BodyProgressEntryDialog(),
     );
 
     if (entry == null) return;
@@ -147,6 +146,55 @@ class _ProgressScreenState extends State<ProgressScreen> {
 
     if (!mounted) return;
     _showFloatingSnackBar('Registro guardado');
+  }
+
+  Future<void> _showEditEntryDialog(BodyProgressEntry entry) async {
+    final updatedEntry = await showDialog<BodyProgressEntry>(
+      context: context,
+      builder: (_) => _BodyProgressEntryDialog(existing: entry),
+    );
+
+    if (updatedEntry == null) return;
+
+    await _progressService.saveEntry(updatedEntry);
+    await _refresh();
+
+    if (!mounted) return;
+    _showFloatingSnackBar('Registro actualizado');
+  }
+
+  Future<void> _deleteEntry(BodyProgressEntry entry) async {
+    final confirmed =
+        await showDialog<bool>(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: const Text('Eliminar registro'),
+              content: Text(
+                'Se eliminará el registro del ${_formatDate(entry.date)}.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Eliminar'),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
+
+    if (!confirmed) return;
+
+    await _progressService.deleteEntry(entry.id);
+    await _refresh();
+
+    if (!mounted) return;
+    _showFloatingSnackBar('Registro eliminado');
   }
 
   Future<void> _showEditProfileDialog() async {
@@ -543,6 +591,25 @@ class _ProgressScreenState extends State<ProgressScreen> {
                             ),
                         ],
                       ),
+                    ),
+                    trailing: PopupMenuButton<String>(
+                      onSelected: (value) {
+                        if (value == 'edit') {
+                          _showEditEntryDialog(entry);
+                        } else if (value == 'delete') {
+                          _deleteEntry(entry);
+                        }
+                      },
+                      itemBuilder: (context) => const [
+                        PopupMenuItem(
+                          value: 'edit',
+                          child: Text('Editar registro'),
+                        ),
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: Text('Eliminar registro'),
+                        ),
+                      ],
                     ),
                   );
                 },
@@ -1161,16 +1228,17 @@ class _EditProfileDialogState extends State<_EditProfileDialog> {
   }
 }
 
-class _AddBodyProgressEntryDialog extends StatefulWidget {
-  const _AddBodyProgressEntryDialog();
+class _BodyProgressEntryDialog extends StatefulWidget {
+  final BodyProgressEntry? existing;
+
+  const _BodyProgressEntryDialog({this.existing});
 
   @override
-  State<_AddBodyProgressEntryDialog> createState() =>
-      _AddBodyProgressEntryDialogState();
+  State<_BodyProgressEntryDialog> createState() =>
+      _BodyProgressEntryDialogState();
 }
 
-class _AddBodyProgressEntryDialogState
-    extends State<_AddBodyProgressEntryDialog> {
+class _BodyProgressEntryDialogState extends State<_BodyProgressEntryDialog> {
   late final TextEditingController _weightController;
   late final TextEditingController _waistController;
   late final TextEditingController _chestController;
@@ -1178,18 +1246,33 @@ class _AddBodyProgressEntryDialogState
   late final TextEditingController _thighController;
   late final TextEditingController _bodyFatController;
 
-  DateTime _selectedDate = DateTime.now();
+  late DateTime _selectedDate;
   String? _errorText;
 
   @override
   void initState() {
     super.initState();
-    _weightController = TextEditingController();
-    _waistController = TextEditingController();
-    _chestController = TextEditingController();
-    _armController = TextEditingController();
-    _thighController = TextEditingController();
-    _bodyFatController = TextEditingController();
+    final existing = widget.existing;
+
+    _selectedDate = existing?.date ?? DateTime.now();
+    _weightController = TextEditingController(
+      text: existing?.weight.toString() ?? '',
+    );
+    _waistController = TextEditingController(
+      text: existing?.waist?.toString() ?? '',
+    );
+    _chestController = TextEditingController(
+      text: existing?.chest?.toString() ?? '',
+    );
+    _armController = TextEditingController(
+      text: existing?.arm?.toString() ?? '',
+    );
+    _thighController = TextEditingController(
+      text: existing?.thigh?.toString() ?? '',
+    );
+    _bodyFatController = TextEditingController(
+      text: existing?.bodyFat?.toString() ?? '',
+    );
   }
 
   @override
@@ -1244,7 +1327,9 @@ class _AddBodyProgressEntryDialogState
     }
 
     final entry = BodyProgressEntry(
-      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      id:
+          widget.existing?.id ??
+          DateTime.now().microsecondsSinceEpoch.toString(),
       date: _selectedDate,
       weight: weight,
       waist: _parseOptional(_waistController.text),
@@ -1259,8 +1344,12 @@ class _AddBodyProgressEntryDialogState
 
   @override
   Widget build(BuildContext context) {
+    final isEditing = widget.existing != null;
+
     return AlertDialog(
-      title: const Text('Nuevo registro corporal'),
+      title: Text(
+        isEditing ? 'Editar registro corporal' : 'Nuevo registro corporal',
+      ),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1344,7 +1433,10 @@ class _AddBodyProgressEntryDialogState
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancelar'),
         ),
-        FilledButton(onPressed: _save, child: const Text('Guardar')),
+        FilledButton(
+          onPressed: _save,
+          child: Text(isEditing ? 'Guardar cambios' : 'Guardar'),
+        ),
       ],
     );
   }

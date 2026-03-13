@@ -23,19 +23,20 @@ class WorkoutScreen extends StatefulWidget {
 }
 
 class _WorkoutScreenState extends State<WorkoutScreen> {
+  // Colores base de la pantalla.
   static const Color _panelColor = Color(0xFF171C25);
   static const Color _panelSoftColor = Color(0xFF1C2330);
-  static const Color _accentColor = Color(0xFF4FC3F7);
-  static const Color _successColor = Color(0xFF4ADE80);
-  static const Color _warningColor = Color(0xFFFBBF24);
 
+  // Repositorios principales.
   final WorkoutRepository _workoutRepository = AppRepositories.workouts;
   final CustomExerciseRepository _customExerciseRepository =
       AppRepositories.customExercises;
 
+  // Estado del entrenamiento actual.
   final List<_WorkoutExerciseEntry> _selectedExercises = [];
   final List<Exercise> _customExercises = [];
 
+  // Snapshots del rendimiento histórico por ejercicio.
   Map<String, ExercisePerformanceSnapshot> _exerciseSnapshots = {};
 
   late final DateTime _startedAt;
@@ -52,6 +53,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     super.initState();
     _startedAt = DateTime.now();
 
+    // Cronómetro del entrenamiento.
     _workoutTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       setState(() {
@@ -61,6 +63,13 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
 
     _loadExerciseSnapshots();
     _loadCustomExercises();
+  }
+
+  @override
+  void dispose() {
+    _workoutTimer?.cancel();
+    _restTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadExerciseSnapshots() async {
@@ -86,6 +95,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     });
   }
 
+  // Mezcla ejercicios base + personalizados evitando duplicados por id.
   List<Exercise> get _allAvailableExercises {
     final Map<String, Exercise> byId = {};
 
@@ -98,13 +108,6 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     }
 
     return byId.values.toList();
-  }
-
-  @override
-  void dispose() {
-    _workoutTimer?.cancel();
-    _restTimer?.cancel();
-    super.dispose();
   }
 
   String _formatDuration(int totalSeconds) {
@@ -159,6 +162,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
         .replaceAll('ú', 'u');
   }
 
+  // Convierte el grupo muscular a uno de los tags principales de sesión.
   String? _normalizeMuscleGroupToSessionTag(String muscleGroup) {
     final normalized = _normalizeText(muscleGroup.trim());
 
@@ -167,6 +171,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     if (normalized.contains('hombro')) return 'hombro';
     if (normalized.contains('biceps')) return 'biceps';
     if (normalized.contains('triceps')) return 'triceps';
+
     if (normalized.contains('pierna') ||
         normalized.contains('cuadriceps') ||
         normalized.contains('femoral') ||
@@ -174,6 +179,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
         normalized.contains('gemelo')) {
       return 'pierna';
     }
+
     if (normalized.contains('abdomen') ||
         normalized.contains('abs') ||
         normalized.contains('core')) {
@@ -246,6 +252,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     );
   }
 
+  // Snackbar segura para evitar errores al cerrar diálogos/sheets.
   void _showMessage(String message) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -260,6 +267,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     });
   }
 
+  // Reinicia el contador de descanso cada vez que se guarda/duplica una serie.
   void _restartRestStopwatch() {
     _restTimer?.cancel();
     _currentRestSeconds = 0;
@@ -271,6 +279,56 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
         _currentRestSeconds++;
       });
     });
+  }
+
+  bool get _hasUnsavedChanges => _selectedExercises.isNotEmpty;
+
+  // Pregunta antes de salir si hay ejercicios añadidos sin guardar.
+  Future<bool> _confirmDiscardWorkout() async {
+    if (_isSaving) return false;
+    if (!_hasUnsavedChanges) return true;
+
+    final shouldLeave =
+        await showDialog<bool>(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: const Text('Salir del entrenamiento'),
+              content: const Text(
+                'Tienes cambios sin guardar. Si sales ahora, perderás este entrenamiento.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Seguir aquí'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Salir sin guardar'),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
+
+    return shouldLeave;
+  }
+
+  // Reordena ejercicios en la lista actual.
+  void _reorderExercises(int oldIndex, int newIndex) {
+    if (oldIndex < newIndex) {
+      newIndex -= 1;
+    }
+
+    if (oldIndex == newIndex) return;
+
+    setState(() {
+      final item = _selectedExercises.removeAt(oldIndex);
+      _selectedExercises.insert(newIndex, item);
+    });
+
+    _showMessage('Ejercicios reordenados');
   }
 
   Future<void> _showExercisePicker() async {
@@ -300,6 +358,8 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     _showMessage('${selectedExercise.name} añadido');
   }
 
+  // Editor de serie: el bottom sheet devuelve el resultado
+  // y la pantalla padre actualiza el estado después.
   Future<void> _showSetEditorSheet(
     _WorkoutExerciseEntry entry, {
     int? setIndex,
@@ -318,7 +378,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      builder: (sheetContext) {
+      builder: (_) {
         return _SetEditorSheet(
           isEditing: isEditing,
           exerciseName: entry.exercise.name,
@@ -354,7 +414,6 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     );
 
     if (result == null) return;
-
     if (!mounted) return;
 
     setState(() {
@@ -748,11 +807,14 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     );
   }
 
-  Widget _buildExerciseCard(_WorkoutExerciseEntry entry) {
+  // Tarjeta principal de cada ejercicio dentro del entrenamiento.
+  // Ahora incluye handle de arrastre para reordenar.
+  Widget _buildExerciseCard(_WorkoutExerciseEntry entry, int index) {
     final exerciseVolume = _exerciseVolume(entry);
     final isCustom = entry.exercise.isCustom;
 
     return Card(
+      key: ValueKey('exercise_${entry.exercise.id}'),
       margin: const EdgeInsets.only(bottom: 14),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -832,6 +894,16 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                     ),
                   ],
                 ),
+                ReorderableDragStartListener(
+                  index: index,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 4),
+                    child: Icon(
+                      Icons.drag_handle_rounded,
+                      color: Colors.white.withOpacity(0.70),
+                    ),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 14),
@@ -858,7 +930,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Añadir la primera serie para empezar a registrar este ejercicio.',
+                      'Añade la primera serie para empezar a registrar este ejercicio.',
                       style: TextStyle(color: Colors.white.withOpacity(0.72)),
                     ),
                     const SizedBox(height: 14),
@@ -944,7 +1016,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
           FilledButton.icon(
             onPressed: _showExercisePicker,
             icon: const Icon(Icons.add),
-            label: const Text('Añadir  primer ejercicio'),
+            label: const Text('Añadir primer ejercicio'),
           ),
         ],
       ),
@@ -953,27 +1025,82 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
-          children: [
-            _buildTopSummary(),
-            const SizedBox(height: 16),
-            _buildActionBar(),
-            const SizedBox(height: 16),
-            if (_selectedExercises.isEmpty)
-              _buildEmptyState()
-            else
-              ..._selectedExercises.map(_buildExerciseCard),
-          ],
+    return WillPopScope(
+      onWillPop: _confirmDiscardWorkout,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(widget.title),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () async {
+              final shouldLeave = await _confirmDiscardWorkout();
+              if (!mounted || !shouldLeave) return;
+              Navigator.of(context).pop();
+            },
+          ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showExercisePicker,
-        icon: const Icon(Icons.add),
-        label: const Text('Ejercicio'),
+        body: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
+            children: [
+              _buildTopSummary(),
+              const SizedBox(height: 16),
+              _buildActionBar(),
+              const SizedBox(height: 16),
+              if (_selectedExercises.isEmpty)
+                _buildEmptyState()
+              else ...[
+                if (_selectedExercises.length > 1)
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 14),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: _panelSoftColor,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: Colors.white.withOpacity(0.05)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline_rounded,
+                          size: 18,
+                          color: Colors.white.withOpacity(0.78),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Mantén el icono de arrastre para reordenar ejercicios.',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.78),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ReorderableListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  buildDefaultDragHandles: false,
+                  itemCount: _selectedExercises.length,
+                  onReorder: _reorderExercises,
+                  proxyDecorator: (child, index, animation) {
+                    return Material(color: Colors.transparent, child: child);
+                  },
+                  itemBuilder: (context, index) {
+                    return _buildExerciseCard(_selectedExercises[index], index);
+                  },
+                ),
+              ],
+            ],
+          ),
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: _showExercisePicker,
+          icon: const Icon(Icons.add),
+          label: const Text('Ejercicio'),
+        ),
       ),
     );
   }
@@ -1210,7 +1337,7 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
             ),
             const SizedBox(height: 18),
             const Text(
-              'Añadir  ejercicio',
+              'Añadir ejercicio',
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 6),
@@ -1519,7 +1646,7 @@ class _SetEditorSheetState extends State<_SetEditorSheet> {
             ),
             const SizedBox(height: 18),
             Text(
-              widget.isEditing ? 'Editar serie' : 'Añadir  serie',
+              widget.isEditing ? 'Editar serie' : 'Añadir serie',
               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 6),

@@ -51,6 +51,10 @@ class ProgressService {
     await bodyProgressRepository.saveEntry(entry);
   }
 
+  Future<void> deleteEntry(String entryId) async {
+    await bodyProgressRepository.deleteEntry(entryId);
+  }
+
   Future<void> clearAllEntries() async {
     await bodyProgressRepository.clearAllEntries();
   }
