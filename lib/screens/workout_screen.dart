@@ -1,12 +1,160 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../models/exercise.dart';
 import '../models/workout_session.dart';
 import '../repositories/custom_exercise_repository.dart';
 import '../repositories/workout_repository.dart';
 import '../services/app_repositories.dart';
+
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../models/exercise.dart';
+
+class WorkoutDraft {
+  final String title;
+  final DateTime startedAt;
+  final int currentRestSeconds;
+  final bool hasStartedRestTracking;
+  final List<WorkoutDraftExercise> exercises;
+
+  const WorkoutDraft({
+    required this.title,
+    required this.startedAt,
+    required this.currentRestSeconds,
+    required this.hasStartedRestTracking,
+    required this.exercises,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'title': title,
+      'startedAt': startedAt.toIso8601String(),
+      'currentRestSeconds': currentRestSeconds,
+      'hasStartedRestTracking': hasStartedRestTracking,
+      'exercises': exercises.map((e) => e.toMap()).toList(),
+    };
+  }
+
+  factory WorkoutDraft.fromMap(Map<String, dynamic> map) {
+    return WorkoutDraft(
+      title: (map['title'] ?? '').toString(),
+      startedAt: DateTime.parse(map['startedAt'] as String),
+      currentRestSeconds: (map['currentRestSeconds'] ?? 0) as int,
+      hasStartedRestTracking: (map['hasStartedRestTracking'] ?? false) as bool,
+      exercises: (map['exercises'] as List? ?? [])
+          .map(
+            (e) => WorkoutDraftExercise.fromMap(Map<String, dynamic>.from(e)),
+          )
+          .toList(),
+    );
+  }
+}
+
+class WorkoutDraftExercise {
+  final Exercise exercise;
+  final List<WorkoutDraftSet> sets;
+
+  const WorkoutDraftExercise({required this.exercise, required this.sets});
+
+  Map<String, dynamic> toMap() {
+    return {
+      'exercise': {
+        'id': exercise.id,
+        'name': exercise.name,
+        'muscleGroup': exercise.muscleGroup,
+        'tags': exercise.tags,
+        'isCustom': exercise.isCustom,
+      },
+      'sets': sets.map((s) => s.toMap()).toList(),
+    };
+  }
+
+  factory WorkoutDraftExercise.fromMap(Map<String, dynamic> map) {
+    final exerciseMap = Map<String, dynamic>.from(map['exercise']);
+
+    return WorkoutDraftExercise(
+      exercise: Exercise(
+        id: (exerciseMap['id'] ?? '').toString(),
+        name: (exerciseMap['name'] ?? '').toString(),
+        muscleGroup: (exerciseMap['muscleGroup'] ?? '').toString(),
+        tags: (exerciseMap['tags'] as List? ?? [])
+            .map((e) => e.toString())
+            .toList(),
+        isCustom: exerciseMap['isCustom'] == true,
+      ),
+      sets: (map['sets'] as List? ?? [])
+          .map((s) => WorkoutDraftSet.fromMap(Map<String, dynamic>.from(s)))
+          .toList(),
+    );
+  }
+}
+
+class WorkoutDraftSet {
+  final int setNumber;
+  final int reps;
+  final double weight;
+  final int restSeconds;
+  final DateTime createdAt;
+
+  const WorkoutDraftSet({
+    required this.setNumber,
+    required this.reps,
+    required this.weight,
+    required this.restSeconds,
+    required this.createdAt,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'setNumber': setNumber,
+      'reps': reps,
+      'weight': weight,
+      'restSeconds': restSeconds,
+      'createdAt': createdAt.toIso8601String(),
+    };
+  }
+
+  factory WorkoutDraftSet.fromMap(Map<String, dynamic> map) {
+    return WorkoutDraftSet(
+      setNumber: (map['setNumber'] ?? 1) as int,
+      reps: (map['reps'] ?? 0) as int,
+      weight: ((map['weight'] ?? 0) as num).toDouble(),
+      restSeconds: (map['restSeconds'] ?? 0) as int,
+      createdAt: DateTime.parse(map['createdAt'] as String),
+    );
+  }
+}
+
+class WorkoutDraftService {
+  static const String _draftKey = 'xafit_active_workout_draft';
+
+  const WorkoutDraftService();
+
+  Future<void> saveDraft(WorkoutDraft draft) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_draftKey, jsonEncode(draft.toMap()));
+  }
+
+  Future<WorkoutDraft?> loadDraft() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_draftKey);
+
+    if (raw == null || raw.isEmpty) return null;
+
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map<String, dynamic>) return null;
+
+    return WorkoutDraft.fromMap(decoded);
+  }
+
+  Future<void> clearDraft() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_draftKey);
+  }
+}
 
 class WorkoutScreen extends StatefulWidget {
   final String title;
@@ -31,6 +179,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   final WorkoutRepository _workoutRepository = AppRepositories.workouts;
   final CustomExerciseRepository _customExerciseRepository =
       AppRepositories.customExercises;
+  final WorkoutDraftService _workoutDraftService = const WorkoutDraftService();
 
   // Estado del entrenamiento actual.
   final List<_WorkoutExerciseEntry> _selectedExercises = [];
@@ -39,7 +188,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   // Snapshots del rendimiento histórico por ejercicio.
   Map<String, ExercisePerformanceSnapshot> _exerciseSnapshots = {};
 
-  late final DateTime _startedAt;
+  late DateTime _startedAt;
   Timer? _workoutTimer;
   Timer? _restTimer;
 
@@ -53,7 +202,6 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     super.initState();
     _startedAt = DateTime.now();
 
-    // Cronómetro del entrenamiento.
     _workoutTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       setState(() {
@@ -63,6 +211,10 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
 
     _loadExerciseSnapshots();
     _loadCustomExercises();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _restoreDraftIfNeeded();
+    });
   }
 
   @override
@@ -281,6 +433,119 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     });
   }
 
+  Future<void> _saveDraftSilently() async {
+    if (_selectedExercises.isEmpty) {
+      await _workoutDraftService.clearDraft();
+      return;
+    }
+
+    final draft = WorkoutDraft(
+      title: widget.title,
+      startedAt: _startedAt,
+      currentRestSeconds: _currentRestSeconds,
+      hasStartedRestTracking: _hasStartedRestTracking,
+      exercises: _selectedExercises.map((entry) {
+        return WorkoutDraftExercise(
+          exercise: entry.exercise,
+          sets: entry.sets.map((set) {
+            return WorkoutDraftSet(
+              setNumber: set.setNumber,
+              reps: set.reps,
+              weight: set.weight,
+              restSeconds: set.restSeconds,
+              createdAt: set.createdAt,
+            );
+          }).toList(),
+        );
+      }).toList(),
+    );
+
+    await _workoutDraftService.saveDraft(draft);
+  }
+
+  void _resumeRestStopwatch() {
+    _restTimer?.cancel();
+
+    if (!_hasStartedRestTracking) return;
+
+    _restTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() {
+        _currentRestSeconds++;
+      });
+    });
+  }
+
+  Future<void> _restoreDraftIfNeeded() async {
+    final draft = await _workoutDraftService.loadDraft();
+
+    if (!mounted || draft == null) return;
+
+    // Solo restauramos si pertenece a esta misma pantalla/título.
+    if (draft.title != widget.title) return;
+    if (draft.exercises.isEmpty) return;
+
+    final shouldRestore =
+        await showDialog<bool>(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: const Text('Recuperar entrenamiento'),
+              content: const Text(
+                'Hay un entrenamiento en curso sin guardar. ¿Quieres recuperarlo?',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Descartar'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Recuperar'),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
+
+    if (!mounted) return;
+
+    if (!shouldRestore) {
+      await _workoutDraftService.clearDraft();
+      return;
+    }
+
+    setState(() {
+      _startedAt = draft.startedAt;
+      _elapsedSeconds = DateTime.now().difference(_startedAt).inSeconds;
+      _currentRestSeconds = draft.currentRestSeconds;
+      _hasStartedRestTracking = draft.hasStartedRestTracking;
+
+      _selectedExercises
+        ..clear()
+        ..addAll(
+          draft.exercises.map(
+            (draftExercise) => _WorkoutExerciseEntry(
+              exercise: draftExercise.exercise,
+              sets: draftExercise.sets.map((draftSet) {
+                return _WorkoutSetEntry(
+                  setNumber: draftSet.setNumber,
+                  reps: draftSet.reps,
+                  weight: draftSet.weight,
+                  restSeconds: draftSet.restSeconds,
+                  createdAt: draftSet.createdAt,
+                );
+              }).toList(),
+            ),
+          ),
+        );
+    });
+
+    _resumeRestStopwatch();
+    _showMessage('Entrenamiento recuperado');
+  }
+
   bool get _hasUnsavedChanges => _selectedExercises.isNotEmpty;
 
   // Pregunta antes de salir si hay ejercicios añadidos sin guardar.
@@ -312,11 +577,15 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
         ) ??
         false;
 
+    if (shouldLeave) {
+      await _workoutDraftService.clearDraft();
+    }
+
     return shouldLeave;
   }
 
   // Reordena ejercicios en la lista actual.
-  void _reorderExercises(int oldIndex, int newIndex) {
+  Future<void> _reorderExercises(int oldIndex, int newIndex) async {
     if (oldIndex < newIndex) {
       newIndex -= 1;
     }
@@ -328,7 +597,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       _selectedExercises.insert(newIndex, item);
     });
 
-    _showMessage('Ejercicios reordenados');
+    await _saveDraftSilently();
   }
 
   Future<void> _showExercisePicker() async {
@@ -355,6 +624,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       );
     });
 
+    await _saveDraftSilently();
     _showMessage('${selectedExercise.name} añadido');
   }
 
@@ -442,10 +712,11 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       _restartRestStopwatch();
     }
 
+    await _saveDraftSilently();
     _showMessage(isEditing ? 'Serie actualizada' : 'Serie guardada');
   }
 
-  void _deleteSet(_WorkoutExerciseEntry entry, int setIndex) {
+  Future<void> _deleteSet(_WorkoutExerciseEntry entry, int setIndex) async {
     setState(() {
       entry.sets.removeAt(setIndex);
 
@@ -454,10 +725,11 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       }
     });
 
+    await _saveDraftSilently();
     _showMessage('Serie eliminada');
   }
 
-  void _duplicateLastSet(_WorkoutExerciseEntry entry) {
+  Future<void> _duplicateLastSet(_WorkoutExerciseEntry entry) async {
     if (entry.sets.isEmpty) return;
 
     final lastSet = entry.sets.last;
@@ -475,14 +747,16 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     });
 
     _restartRestStopwatch();
+    await _saveDraftSilently();
     _showMessage('Serie duplicada');
   }
 
-  void _removeExercise(_WorkoutExerciseEntry entry) {
+  Future<void> _removeExercise(_WorkoutExerciseEntry entry) async {
     setState(() {
       _selectedExercises.remove(entry);
     });
 
+    await _saveDraftSilently();
     _showMessage('${entry.exercise.name} eliminado del entreno');
   }
 
@@ -546,6 +820,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       );
 
       await _workoutRepository.saveSession(session);
+      await _workoutDraftService.clearDraft();
 
       if (!mounted) return;
 
