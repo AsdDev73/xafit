@@ -1309,10 +1309,12 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
 
+        final navigator = Navigator.of(context);
         final shouldLeave = await _confirmDiscardWorkout();
+
         if (!mounted || !shouldLeave) return;
 
-        Navigator.of(context).pop();
+        navigator.pop();
       },
       child: Scaffold(
         appBar: AppBar(
