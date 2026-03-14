@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import '../data/exercise_catalog.dart';
 import '../services/app_repositories.dart';
 import '../services/dashboard_service.dart';
+import '../services/workout_draft_service.dart'
+    show WorkoutDraft, WorkoutDraftService;
 import 'workout_detail_screen.dart';
-import 'workout_screen.dart';
+import 'workout_screen.dart' show WorkoutScreen;
 
 class HomeScreen extends StatefulWidget {
   final int refreshToken;
@@ -16,15 +18,20 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  // Servicio principal del dashboard.
   final DashboardService _dashboardService = AppRepositories.dashboardService;
+
+  // Servicio para detectar si hay un entreno en curso guardado en borrador.
+  final WorkoutDraftService _workoutDraftService = const WorkoutDraftService();
 
   bool _isLoading = true;
   DashboardOverview _dashboard = const DashboardOverview.empty();
+  WorkoutDraft? _activeDraft;
 
   @override
   void initState() {
     super.initState();
-    _refreshDashboard();
+    _refreshHome();
   }
 
   @override
@@ -32,8 +39,16 @@ class _HomeScreenState extends State<HomeScreen> {
     super.didUpdateWidget(oldWidget);
 
     if (oldWidget.refreshToken != widget.refreshToken) {
-      _refreshDashboard();
+      _refreshHome();
     }
+  }
+
+  // Refresco completo de Inicio:
+  // - dashboard
+  // - borrador de entreno en curso
+  Future<void> _refreshHome() async {
+    await _refreshDashboard();
+    await _loadDraftBanner();
   }
 
   Future<void> _refreshDashboard() async {
@@ -51,10 +66,19 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  Future<void> _loadDraftBanner() async {
+    final draft = await _workoutDraftService.loadDraft();
+
+    if (!mounted) return;
+
+    setState(() {
+      _activeDraft = draft;
+    });
+  }
+
   Future<void> _openAndRefresh(Widget screen) async {
     await Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
-
-    await _refreshDashboard();
+    await _refreshHome();
   }
 
   Future<void> _openLastSessionDetail() async {
@@ -66,7 +90,21 @@ class _HomeScreenState extends State<HomeScreen> {
       MaterialPageRoute(builder: (_) => WorkoutDetailScreen(session: session)),
     );
 
-    await _refreshDashboard();
+    await _refreshHome();
+  }
+
+  void _showMessage(String message) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      if (messenger == null) return;
+
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+      );
+    });
   }
 
   String _formatWeight(double value) {
@@ -90,10 +128,78 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _formatDaysSince(DateTime date) {
     final diff = DateTime.now().difference(date).inDays;
-
     if (diff <= 0) return 'Hoy';
     if (diff == 1) return 'Hace 1 día';
     return 'Hace $diff días';
+  }
+
+  String _formatDraftAge(DateTime startedAt) {
+    final diff = DateTime.now().difference(startedAt);
+
+    if (diff.inMinutes < 1) return 'Hace un momento';
+    if (diff.inMinutes < 60) return 'Hace ${diff.inMinutes} min';
+    if (diff.inHours < 24) return 'Hace ${diff.inHours} h';
+    return 'Hace ${diff.inDays} días';
+  }
+
+  int _draftSetCount(WorkoutDraft draft) {
+    return draft.exercises.fold<int>(
+      0,
+      (total, exercise) => total + exercise.sets.length,
+    );
+  }
+
+  Future<void> _continueDraft() async {
+    final draft = _activeDraft;
+    if (draft == null) return;
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => WorkoutScreen(
+          title: draft.title,
+          availableExercises: ExerciseCatalog.allExercises,
+        ),
+      ),
+    );
+
+    await _refreshHome();
+  }
+
+  Future<void> _discardDraft() async {
+    final draft = _activeDraft;
+    if (draft == null) return;
+
+    final confirmed =
+        await showDialog<bool>(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: const Text('Descartar entrenamiento en curso'),
+              content: const Text(
+                'Se eliminará el borrador actual y no podrás recuperarlo después.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Descartar'),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
+
+    if (!confirmed) return;
+
+    await _workoutDraftService.clearDraft();
+    await _loadDraftBanner();
+
+    _showMessage('Borrador descartado');
   }
 
   Widget _buildMetricCard({
@@ -241,6 +347,112 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // Banner que aparece cuando hay un entreno en curso recuperable.
+  Widget _buildActiveDraftBanner() {
+    final draft = _activeDraft;
+
+    if (draft == null || draft.exercises.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final exerciseCount = draft.exercises.length;
+    final setCount = _draftSetCount(draft);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF3A2E12), Color(0xFF5A4516)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.06)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.10),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.play_circle_outline_rounded, size: 26),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Entreno en curso',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      draft.title,
+                      style: const TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'Guardado automáticamente ${_formatDraftAge(draft.startedAt)}',
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.white.withOpacity(0.82),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _buildInfoPill('$exerciseCount ejercicios'),
+              _buildInfoPill('$setCount series'),
+              if (draft.hasStartedRestTracking)
+                _buildInfoPill('Descanso ${draft.currentRestSeconds}s'),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _discardDraft,
+                  icon: const Icon(Icons.delete_outline_rounded),
+                  label: const Text('Descartar'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: _continueDraft,
+                  icon: const Icon(Icons.play_arrow_rounded),
+                  label: const Text('Continuar'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildLastSessionCard() {
     final session = _dashboard.lastSession;
 
@@ -262,7 +474,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 10),
             Text(
-              'Todavía no has guardado entrenamientos. Cuando registres el primero aparecerá aquí.',
+              'Todavía no has guardado entrenamientos.\nCuando registres el primero aparecerá aquí.',
               style: TextStyle(
                 height: 1.45,
                 color: Colors.white.withOpacity(0.74),
@@ -454,7 +666,7 @@ class _HomeScreenState extends State<HomeScreen> {
           'Actual ${_formatWeight(currentWeight)} kg • objetivo ${_formatWeight(targetWeight)} kg';
     } else if (targetWeight != null) {
       detailText =
-          'Objetivo configurado en ${_formatWeight(targetWeight)} kg. Registra tu peso actual para compararlo.';
+          'Objetivo configurado en ${_formatWeight(targetWeight)} kg.\nRegistra tu peso actual para compararlo.';
     }
 
     final Color statusColor = isOnTargetDirection == null
@@ -603,7 +815,7 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('XaFit'),
         actions: [
           IconButton(
-            onPressed: _refreshDashboard,
+            onPressed: _refreshHome,
             icon: const Icon(Icons.refresh_rounded),
           ),
         ],
@@ -611,11 +823,16 @@ class _HomeScreenState extends State<HomeScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
-              onRefresh: _refreshDashboard,
+              onRefresh: _refreshHome,
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                 children: [
                   _buildHeroCard(),
+                  if (_activeDraft != null &&
+                      _activeDraft!.exercises.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    _buildActiveDraftBanner(),
+                  ],
                   const SizedBox(height: 18),
                   Row(
                     children: [
