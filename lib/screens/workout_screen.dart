@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../models/exercise.dart';
 import '../models/workout_session.dart';
@@ -11,7 +10,6 @@ import '../services/app_repositories.dart';
 
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/exercise.dart';
 
 class WorkoutDraft {
   final String title;
@@ -1300,8 +1298,16 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: _confirmDiscardWorkout,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+
+        final shouldLeave = await _confirmDiscardWorkout();
+        if (!mounted || !shouldLeave) return;
+
+        Navigator.of(context).pop();
+      },
       child: Scaffold(
         appBar: AppBar(
           title: Text(widget.title),
@@ -1309,7 +1315,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
             icon: const Icon(Icons.arrow_back),
             onPressed: () async {
               final shouldLeave = await _confirmDiscardWorkout();
-              if (!mounted || !shouldLeave) return;
+              if (!context.mounted || !shouldLeave) return;
               Navigator.of(context).pop();
             },
           ),

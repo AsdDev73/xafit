@@ -455,7 +455,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: DropdownButtonFormField<_ProgressMetric>(
-          value: _selectedMetric,
+          initialValue: _selectedMetric,
           decoration: const InputDecoration(labelText: 'Métrica de la gráfica'),
           items: _ProgressMetric.values.map((metric) {
             return DropdownMenuItem(
@@ -1178,7 +1178,7 @@ class _EditProfileDialogState extends State<_EditProfileDialog> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: _selectedGoal,
+              initialValue: _selectedGoal,
               decoration: const InputDecoration(labelText: 'Objetivo'),
               items: _goals.map((goal) {
                 return DropdownMenuItem(value: goal, child: Text(goal));

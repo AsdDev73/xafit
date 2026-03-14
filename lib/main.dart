@@ -1,11 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 
 import 'screens/main_navigation_screen.dart';
 import 'services/app_repositories.dart';
-import 'services/data_migration_service.dart';
-import 'services/notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -48,7 +45,7 @@ class XaFitApp extends StatelessWidget {
         ),
         navigationBarTheme: NavigationBarThemeData(
           backgroundColor: const Color(0xFF151922),
-          indicatorColor: Colors.white.withOpacity(0.10),
+          indicatorColor: Colors.white.withValues(alpha: 0.10),
           labelTextStyle: WidgetStateProperty.resolveWith((states) {
             final selected = states.contains(WidgetState.selected);
             return TextStyle(

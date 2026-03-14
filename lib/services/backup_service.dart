@@ -193,6 +193,6 @@ class BackupService {
     final minute = dateTime.minute.toString().padLeft(2, '0');
     final second = dateTime.second.toString().padLeft(2, '0');
 
-    return '${year}${month}${day}_${hour}${minute}${second}';
+    return '$year$month${day}_$hour$minute$second';
   }
 }
