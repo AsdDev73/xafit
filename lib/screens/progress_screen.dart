@@ -2,12 +2,14 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../models/body_profile.dart';
 import '../models/body_progress_entry.dart';
 import '../services/app_repositories.dart';
+import '../services/notification_service.dart';
 import '../services/progress_service.dart';
 
 class ProgressScreen extends StatefulWidget {
@@ -17,16 +19,36 @@ class ProgressScreen extends StatefulWidget {
   State<ProgressScreen> createState() => _ProgressScreenState();
 }
 
+/// Estado y lógica de la pantalla de Progreso.
+///
+/// Aquí se centraliza la carga del perfil, el historial corporal,
+/// la selección de la métrica visible en la gráfica y la configuración
+/// del recordatorio semanal para el peso.
 class _ProgressScreenState extends State<ProgressScreen> {
+  // Servicio que encapsula perfil + registros de progreso.
   final ProgressService _progressService = ProgressService(
     bodyProfileRepository: AppRepositories.bodyProfile,
     bodyProgressRepository: AppRepositories.bodyProgress,
   );
 
+  // Perfil actual del usuario.
   BodyProfile _profile = BodyProfile.empty;
+
+  // Historial completo de registros corporales.
   List<BodyProgressEntry> _entries = [];
+
+  // Estado general de carga de la pantalla.
   bool _isLoading = true;
+
+  // Estado de carga específico del recordatorio semanal.
+  bool _isReminderLoading = false;
+
+  // Métrica actualmente seleccionada para la gráfica y el historial.
   _ProgressMetric _selectedMetric = _ProgressMetric.weight;
+
+  // Configuración persistida del recordatorio semanal.
+  WeeklyReminderSettings _weeklyReminderSettings =
+      const WeeklyReminderSettings.defaultValue();
 
   @override
   void initState() {
@@ -34,6 +56,11 @@ class _ProgressScreenState extends State<ProgressScreen> {
     _refresh();
   }
 
+  /// Recarga toda la información visible de la pantalla.
+  ///
+  /// Trae perfil, entradas de progreso y la configuración actual del
+  /// recordatorio semanal. Después ordena el historial por fecha ascendente
+  /// para que la gráfica siempre tenga el eje temporal correcto.
   Future<void> _refresh() async {
     setState(() {
       _isLoading = true;
@@ -48,6 +75,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
     setState(() {
       _profile = overview.profile;
       _entries = entries;
+      _weeklyReminderSettings = overview.reminderSettings;
       _isLoading = false;
     });
   }
@@ -131,6 +159,197 @@ class _ProgressScreenState extends State<ProgressScreen> {
       if (!mounted) return;
       _showFloatingSnackBar('Error al importar el backup');
     }
+  }
+
+  /// Devuelve la hora del recordatorio en formato HH:mm.
+  String _formatReminderTime(WeeklyReminderSettings settings) {
+    final hour = settings.hour.toString().padLeft(2, '0');
+    final minute = settings.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
+  /// Activa o desactiva el recordatorio semanal.
+  ///
+  /// Si se activa, intenta programar una notificación semanal real en
+  /// móvil/escritorio y, en web, al menos deja persistida la preferencia.
+  Future<void> _toggleWeeklyReminder(bool enabled) async {
+    setState(() {
+      _isReminderLoading = true;
+    });
+
+    try {
+      if (enabled) {
+        await NotificationService.scheduleWeeklyWeightReminder(
+          hour: _weeklyReminderSettings.hour,
+          minute: _weeklyReminderSettings.minute,
+        );
+      } else {
+        await NotificationService.cancelWeeklyWeightReminder();
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _weeklyReminderSettings = _weeklyReminderSettings.copyWith(
+          enabled: enabled,
+        );
+      });
+
+      _showFloatingSnackBar(
+        enabled
+            ? (kIsWeb
+                  ? 'Configuración del recordatorio guardada'
+                  : 'Recordatorio semanal activado')
+            : 'Recordatorio semanal desactivado',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _showFloatingSnackBar(e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isReminderLoading = false;
+        });
+      }
+    }
+  }
+
+  /// Permite elegir una nueva hora para el recordatorio semanal.
+  ///
+  /// Si el recordatorio ya estaba activo, al cambiar la hora se reprograma
+  /// automáticamente para no obligar al usuario a apagarlo y volver a encenderlo.
+  Future<void> _pickWeeklyReminderTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(
+        hour: _weeklyReminderSettings.hour,
+        minute: _weeklyReminderSettings.minute,
+      ),
+    );
+
+    if (picked == null) return;
+
+    setState(() {
+      _isReminderLoading = true;
+    });
+
+    try {
+      await NotificationService.saveWeeklyReminderTime(
+        hour: picked.hour,
+        minute: picked.minute,
+      );
+
+      if (_weeklyReminderSettings.enabled) {
+        await NotificationService.scheduleWeeklyWeightReminder(
+          hour: picked.hour,
+          minute: picked.minute,
+          requestPermission: false,
+        );
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _weeklyReminderSettings = _weeklyReminderSettings.copyWith(
+          hour: picked.hour,
+          minute: picked.minute,
+        );
+      });
+
+      _showFloatingSnackBar(
+        _weeklyReminderSettings.enabled
+            ? 'Hora del recordatorio actualizada'
+            : 'Hora guardada para el recordatorio',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _showFloatingSnackBar(e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isReminderLoading = false;
+        });
+      }
+    }
+  }
+
+  /// Tarjeta UI del recordatorio semanal.
+  ///
+  /// Muestra el estado actual, el switch de activación y la opción para
+  /// modificar la hora sin salir de la pantalla de progreso.
+  Widget _buildWeeklyReminderCard() {
+    final subtitle = _weeklyReminderSettings.enabled
+        ? 'Cada lunes a las ${_formatReminderTime(_weeklyReminderSettings)}'
+        : 'Actívalo para no olvidar tu registro semanal';
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(Icons.notifications_active_outlined),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Recordatorio semanal',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.72),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch.adaptive(
+                  value: _weeklyReminderSettings.enabled,
+                  onChanged: _isReminderLoading ? null : _toggleWeeklyReminder,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              kIsWeb
+                  ? 'En web solo se guarda la configuración. La notificación real se usa en móvil y escritorio.'
+                  : 'XaFit te avisará para registrar tu peso de la semana.',
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.72)),
+            ),
+            const SizedBox(height: 14),
+            OutlinedButton.icon(
+              onPressed: _isReminderLoading ? null : _pickWeeklyReminderTime,
+              icon: const Icon(Icons.schedule_outlined),
+              label: Text(
+                'Cambiar hora (${_formatReminderTime(_weeklyReminderSettings)})',
+              ),
+            ),
+            if (_isReminderLoading) ...[
+              const SizedBox(height: 14),
+              const LinearProgressIndicator(),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _showAddEntryDialog() async {
@@ -702,6 +921,8 @@ class _ProgressScreenState extends State<ProgressScreen> {
                   _buildProfileCard(),
                   const SizedBox(height: 16),
                   _buildSummaryCards(),
+                  const SizedBox(height: 16),
+                  _buildWeeklyReminderCard(),
                   const SizedBox(height: 16),
                   if (!hasEntries)
                     _buildEmptyState()

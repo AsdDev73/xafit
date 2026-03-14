@@ -3,12 +3,19 @@ import 'package:flutter/material.dart';
 
 import 'screens/main_navigation_screen.dart';
 import 'services/app_repositories.dart';
+import 'services/notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   if (!kIsWeb) {
     await AppRepositories.dataMigrationService.migrateAllIfNeeded();
+  }
+
+  try {
+    await NotificationService.init();
+  } catch (e) {
+    debugPrint('Notification init error: $e');
   }
 
   runApp(const XaFitApp());
