@@ -1,133 +1,190 @@
 # XaFit
 
-XaFit es una app de entrenamiento personal desarrollada con **Flutter** como proyecto de práctica y portfolio.
+XaFit es una app de entrenamiento personal desarrollada en **Flutter** como proyecto de portfolio, con un enfoque **mobile-first**, **offline-first** y centrado en el flujo de **entrenamiento libre**.
 
-La idea principal de la app es poder registrar entrenamientos de forma rápida y cómoda, guardar series, pesos, repeticiones, descansos y llevar también un seguimiento del progreso corporal.
+La idea principal de la app no gira en torno a rutinas cerradas, sino en permitir registrar entrenamientos reales de forma rápida, flexible y útil para el día a día.  
+Actualmente la prioridad del proyecto es **Android**, con intención de dar soporte a **iPhone/iOS** más adelante. La versión web se usa como apoyo visual y de desarrollo, pero no es el objetivo principal del producto.
+
+---
 
 ## Objetivo del proyecto
 
-El objetivo de XaFit es crear una aplicación útil para el día a día en el gimnasio, con una interfaz clara, funcionalidades reales y una base sólida para seguir creciendo.
+Construir una app de fitness sólida, moderna y bien estructurada, pensada como proyecto personal y de portfolio, priorizando:
 
-Además de ser una app personal, también está planteada como proyecto de portfolio para mostrar:
-- desarrollo móvil con Flutter
-- gestión de estado y navegación
-- persistencia local de datos
-- diseño de interfaz
-- evolución progresiva de producto
-
----
-
-## Funcionalidades actuales
-
-### Entrenamiento
-- Crear un **entrenamiento libre**
-- Añadir ejercicios de distintos grupos musculares en una sola sesión
-- Registrar series con:
-  - peso
-  - repeticiones
-  - descanso automático
-- Duplicar la última serie
-- Editar y borrar series
-- Guardar el entrenamiento en historial
-
-### Biblioteca de ejercicios
-- Catálogo de ejercicios por grupo muscular
-- Búsqueda por nombre
-- Filtro por tags
-- Ejercicios predefinidos
-- Posibilidad de añadir ejercicios personalizados
-
-### Historial
-- Guardado local de entrenamientos
-- Consulta de sesiones anteriores
-- Vista detallada de cada entrenamiento
-
-### Rendimiento
-- Referencia de **última vez realizada** por ejercicio
-- **PR (personal record)** por ejercicio
-- Mejor volumen de serie
-
-### Progreso corporal
-- Registro de peso corporal
-- Registro opcional de medidas:
-  - cintura
-  - pecho
-  - brazo
-  - pierna
-  - % grasa
-- Perfil básico:
-  - alias
-  - altura
-  - objetivo
-  - peso objetivo
-  - edad opcional
-- Gráfica de evolución
-- Historial de progreso corporal
-
-### Dashboard principal
-- Entrenos totales
-- Entrenos de la semana
-- Volumen semanal
-- Peso actual
-- Último entrenamiento
-
-### Recordatorio semanal
-- Configuración de recordatorio semanal para registrar el peso
-- Preparado para móvil
-- En web queda la configuración guardada, pero la notificación real se probará en dispositivo móvil
-
----
-
-## Tecnologías usadas
-
-- **Flutter**
-- **Dart**
-- **shared_preferences**
-- **fl_chart**
-- **flutter_local_notifications**
-- **timezone**
-- **flutter_timezone**
+- una buena experiencia de uso en móvil
+- persistencia local robusta
+- arquitectura mantenible
+- base preparada para evolucionar a futuro con sincronización en la nube
 
 ---
 
 ## Estado actual
 
-Actualmente XaFit está en desarrollo activo.
+XaFit ya cuenta con una base funcional bastante completa:
 
-La app ya cuenta con una base funcional sólida y sigue evolucionando con mejoras de:
-- interfaz
-- experiencia de usuario
-- rendimiento
-- nuevas estadísticas
-- recordatorios
-- versión móvil real en Android/iPhone
+- Dashboard/Home con resumen visual del progreso
+- Entrenamiento libre con guardado real de sesiones
+- Historial de entrenamientos
+- Biblioteca de ejercicios
+- Ejercicios personalizados
+- Seguimiento corporal
+- Recordatorio semanal
+- Exportación e importación de backup
+- Guardado automático de borrador de entrenamiento
+- Persistencia principal con **Drift**
 
-Por ahora el desarrollo se ha realizado principalmente en:
-- **Windows 10**
-- **Chrome**
-- entorno Flutter
-
-La prueba en Android/iPhone queda como siguiente fase del proyecto.
+La app está pensada primero para **uso real offline**, dejando la sincronización como una futura evolución del proyecto.
 
 ---
 
-## Estructura general de la app
+## Funcionalidades principales
 
-- **Inicio** → dashboard principal
-- **Progreso** → seguimiento corporal y gráfica
-- **Biblioteca** → ejercicios por grupo muscular
-- **Historial** → entrenamientos guardados
+### Inicio / Dashboard
+- Hero principal con acceso rápido al entrenamiento
+- Métricas clave:
+  - sesiones totales
+  - entrenamientos de la semana
+  - volumen semanal
+  - peso actual
+- Resumen semanal más visual
+- Último entrenamiento
+- Actividad reciente
+- Objetivo actual
+- Banner de **“Entreno en curso”** si existe un borrador guardado
+
+### Entrenamiento libre
+- Añadir ejercicios
+- Añadir, editar y borrar series
+- Duplicar última serie
+- Referencias de:
+  - **Última vez**
+  - **PR**
+- Reordenar ejercicios
+- Confirmación al salir sin guardar
+- Guardado automático de borrador local
+- Recuperación automática de entrenamiento si la app se cierra inesperadamente
+- Eliminación del borrador al finalizar o descartar el entreno
+
+### Historial
+- Lista de sesiones guardadas
+- Filtros por etiqueta y fecha
+- Pantalla de detalle de sesión
+
+### Biblioteca
+- Ejercicios por grupo muscular
+- Buscador
+- Filtros por tags
+- Soporte para ejercicios personalizados
+
+### Ejercicios personalizados
+- Crear ejercicios
+- Editar ejercicios
+- Eliminar ejercicios
+
+### Progreso corporal
+- Perfil básico
+- Registros corporales
+- Gráfica por métrica
+- Historial de registros
+- CRUD completo de entradas corporales
+- Recordatorio semanal configurable
+- Exportación e importación de backup
+
+### Recordatorio semanal
+- Activación y desactivación desde la app
+- Configuración de hora
+- Persistencia del estado del recordatorio
+- Preparado para notificaciones en móvil
+
+### Backup
+- Exportación de datos a JSON
+- Importación de backup
+- Incluye:
+  - perfil
+  - progreso corporal
+  - sesiones
+  - ejercicios personalizados
 
 ---
 
-## Instalación
+## Enfoque de producto
 
-### Requisitos
-- Flutter instalado
-- VS Code o Android Studio
-- Dependencias descargadas con `flutter pub get`
+XaFit está diseñada con una idea clara:
 
-### Ejecutar el proyecto
+- **mobile-first**
+- **offline-first**
+- experiencia de uso rápida
+- evitar depender de nube desde el inicio
+- dejar una base fuerte antes de añadir sync
+
+La app no busca obligar al usuario a seguir planes cerrados, sino ayudarle a registrar y revisar sus entrenamientos de forma natural.
+
+---
+
+## Stack tecnológico
+
+- **Flutter**
+- **Dart**
+- **Drift** como persistencia principal en móvil/escritorio
+- **shared_preferences** como fallback en web y para estados temporales
+- **flutter_local_notifications** para recordatorios
+- **file_picker** para importación/exportación
+- **share_plus** para compartir backups
+- **build_runner** para generación de código de Drift
+
+---
+
+## Arquitectura y persistencia
+
+La app usa una arquitectura con repositorios desacoplados y servicios específicos.
+
+### Repositorios
+- `WorkoutRepository`
+- `SharedPrefsWorkoutRepository`
+- `DriftWorkoutRepository`
+
+- `BodyProfileRepository`
+- `SharedPrefsBodyProfileRepository`
+- `DriftBodyProfileRepository`
+
+- `BodyProgressRepository`
+- `SharedPrefsBodyProgressRepository`
+- `DriftBodyProgressRepository`
+
+- `CustomExerciseRepository`
+- `SharedPrefsCustomExerciseRepository`
+- `DriftCustomExerciseRepository`
+
+### Servicios
+- `DashboardService`
+- `ProgressService`
+- `DataMigrationService`
+- `BackupService`
+- `WorkoutDraftService`
+
+### Inicialización
+- `main.dart` ejecuta la migración de datos antes de `runApp`
+- `DataMigrationService` migra datos legacy a Drift en entornos no web
+
+---
+
+## Base de datos
+
+Persistencia principal con **Drift**.
+
+### Tablas actuales
+- `WorkoutSessions`
+- `WorkoutExercises`
+- `WorkoutSets`
+- `ProfileRecords`
+- `BodyProgressRecords`
+- `CustomExercises`
+
+### Versión de esquema
+- `schemaVersion: 3`
+
+### Importante
+Si se modifica `app_database.dart`, hay que regenerar los archivos con:
+
 ```bash
-flutter pub get
-flutter run
+flutter pub run build_runner build --delete-conflicting-outputs

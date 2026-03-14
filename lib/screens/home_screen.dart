@@ -8,6 +8,13 @@ import '../services/workout_draft_service.dart'
 import 'workout_detail_screen.dart';
 import 'workout_screen.dart' show WorkoutScreen;
 
+/// Pantalla principal de Inicio.
+///
+/// Objetivos de esta versión:
+/// - Mantener el flujo actual de XaFit sin romper navegación ni datos.
+/// - Hacer la Home más útil visualmente para UX/portfolio.
+/// - Reaprovechar únicamente datos que ya expone DashboardService.
+/// - Mantener el banner de entrenamiento en curso basado en WorkoutDraftService.
 class HomeScreen extends StatefulWidget {
   final int refreshToken;
 
@@ -18,10 +25,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // Servicio principal del dashboard.
+  /// Servicio principal del dashboard.
   final DashboardService _dashboardService = AppRepositories.dashboardService;
 
-  // Servicio para detectar si hay un entreno en curso guardado en borrador.
+  /// Servicio para detectar si hay un entreno en curso guardado en borrador.
   final WorkoutDraftService _workoutDraftService = const WorkoutDraftService();
 
   bool _isLoading = true;
@@ -37,47 +44,35 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void didUpdateWidget(covariant HomeScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-
     if (oldWidget.refreshToken != widget.refreshToken) {
       _refreshHome();
     }
   }
 
-  // Refresco completo de Inicio:
-  // - dashboard
-  // - borrador de entreno en curso
+  /// Refresco completo de Inicio:
+  /// - dashboard
+  /// - borrador de entreno en curso
   Future<void> _refreshHome() async {
-    await _refreshDashboard();
-    await _loadDraftBanner();
-  }
-
-  Future<void> _refreshDashboard() async {
     setState(() {
       _isLoading = true;
     });
 
     final overview = await _dashboardService.loadOverview();
-
-    if (!mounted) return;
-
-    setState(() {
-      _dashboard = overview;
-      _isLoading = false;
-    });
-  }
-
-  Future<void> _loadDraftBanner() async {
     final draft = await _workoutDraftService.loadDraft();
 
     if (!mounted) return;
 
     setState(() {
+      _dashboard = overview;
       _activeDraft = draft;
+      _isLoading = false;
     });
   }
 
   Future<void> _openAndRefresh(Widget screen) async {
     await Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+
+    if (!mounted) return;
     await _refreshHome();
   }
 
@@ -90,34 +85,52 @@ class _HomeScreenState extends State<HomeScreen> {
       MaterialPageRoute(builder: (_) => WorkoutDetailScreen(session: session)),
     );
 
+    if (!mounted) return;
     await _refreshHome();
   }
 
   void _showMessage(String message) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger == null) return;
 
-      final messenger = ScaffoldMessenger.maybeOf(context);
-      if (messenger == null) return;
-
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
-      );
-    });
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+    );
   }
 
-  String _formatWeight(double value) {
+  String _formatNumber(double value) {
     if (value == value.roundToDouble()) {
       return value.toStringAsFixed(0);
     }
     return value.toStringAsFixed(1);
   }
 
+  String _formatWeight(double value) => '${_formatNumber(value)} kg';
+
   String _formatDate(DateTime date) {
     final day = date.day.toString().padLeft(2, '0');
     final month = date.month.toString().padLeft(2, '0');
     return '$day/$month';
+  }
+
+  String _formatLongDate(DateTime date) {
+    const months = <String>[
+      'ene',
+      'feb',
+      'mar',
+      'abr',
+      'may',
+      'jun',
+      'jul',
+      'ago',
+      'sep',
+      'oct',
+      'nov',
+      'dic',
+    ];
+
+    return '${date.day} ${months[date.month - 1]}';
   }
 
   String _formatTime(DateTime date) {
@@ -128,6 +141,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _formatDaysSince(DateTime date) {
     final diff = DateTime.now().difference(date).inDays;
+
     if (diff <= 0) return 'Hoy';
     if (diff == 1) return 'Hace 1 día';
     return 'Hace $diff días';
@@ -140,6 +154,21 @@ class _HomeScreenState extends State<HomeScreen> {
     if (diff.inMinutes < 60) return 'Hace ${diff.inMinutes} min';
     if (diff.inHours < 24) return 'Hace ${diff.inHours} h';
     return 'Hace ${diff.inDays} días';
+  }
+
+  String _formatDuration(int totalSeconds) {
+    final minutes = totalSeconds ~/ 60;
+    final seconds = totalSeconds % 60;
+
+    if (minutes < 60) {
+      if (seconds == 0) return '$minutes min';
+      return '$minutes min';
+    }
+
+    final hours = minutes ~/ 60;
+    final remainingMinutes = minutes % 60;
+    if (remainingMinutes == 0) return '$hours h';
+    return '$hours h $remainingMinutes min';
   }
 
   int _draftSetCount(WorkoutDraft draft) {
@@ -163,6 +192,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
 
+    if (!mounted) return;
     await _refreshHome();
   }
 
@@ -173,7 +203,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final confirmed =
         await showDialog<bool>(
           context: context,
-          builder: (context) {
+          builder: (dialogContext) {
             return AlertDialog(
               title: const Text('Descartar entrenamiento en curso'),
               content: const Text(
@@ -181,11 +211,11 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
                   child: const Text('Cancelar'),
                 ),
                 FilledButton(
-                  onPressed: () => Navigator.of(context).pop(true),
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
                   child: const Text('Descartar'),
                 ),
               ],
@@ -197,45 +227,60 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!confirmed) return;
 
     await _workoutDraftService.clearDraft();
-    await _loadDraftBanner();
+
+    if (!mounted) return;
+
+    setState(() {
+      _activeDraft = null;
+    });
 
     _showMessage('Borrador descartado');
   }
 
+  /// Tarjeta simple reutilizable para métricas rápidas.
   Widget _buildMetricCard({
     required String label,
     required String value,
     required IconData icon,
+    String? hint,
   }) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, size: 18, color: Colors.white70),
-            const SizedBox(height: 12),
-            Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: Colors.white70),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.white.withValues(alpha: 0.72),
             ),
-            const SizedBox(height: 4),
+          ),
+          if (hint != null) ...[
+            const SizedBox(height: 8),
             Text(
-              label,
+              hint,
               style: TextStyle(
-                fontSize: 12,
-                color: Colors.white.withValues(alpha: 0.72),
+                fontSize: 11.5,
+                color: Colors.white.withValues(alpha: 0.56),
               ),
             ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -261,14 +306,24 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  String _heroSubtitle() {
+    final lastSession = _dashboard.lastSession;
+
+    if (lastSession == null) {
+      return 'Empieza fuerte tu siguiente sesión y construye tu historial desde hoy.';
+    }
+
+    if (_dashboard.weeklySessions > 0) {
+      return 'Llevas ${_dashboard.weeklySessions} entrenos esta semana. Sigue sumando progreso.';
+    }
+
+    return 'Último entreno: ${_formatDaysSince(lastSession.startedAt)} • vuelve a activar la semana.';
+  }
+
   Widget _buildHeroCard() {
     final alias = _dashboard.profile.alias.trim().isEmpty
         ? 'Usuario'
         : _dashboard.profile.alias.trim();
-
-    final subtitle = _dashboard.lastSession == null
-        ? 'Empieza fuerte tu siguiente sesión y construye tu historial desde hoy.'
-        : 'Último entreno: ${_formatDaysSince(_dashboard.lastSession!.startedAt)} • sigue sumando progreso.';
 
     return Container(
       width: double.infinity,
@@ -310,7 +365,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 10),
           Text(
-            subtitle,
+            _heroSubtitle(),
             style: TextStyle(
               fontSize: 14,
               height: 1.4,
@@ -326,6 +381,7 @@ class _HomeScreenState extends State<HomeScreen> {
               _buildInfoPill(
                 '${_dashboard.weeklySessions} entrenos esta semana',
               ),
+              _buildInfoPill('${_dashboard.totalSessions} sesiones totales'),
             ],
           ),
           const SizedBox(height: 18),
@@ -347,14 +403,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Banner que aparece cuando hay un entreno en curso recuperable.
-  Widget _buildActiveDraftBanner() {
-    final draft = _activeDraft;
-
-    if (draft == null || draft.exercises.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
+  /// Banner que aparece cuando hay un entreno en curso recuperable.
+  Widget _buildDraftBanner(WorkoutDraft draft) {
     final exerciseCount = draft.exercises.length;
     final setCount = _draftSetCount(draft);
 
@@ -362,13 +412,9 @@ class _HomeScreenState extends State<HomeScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF3A2E12), Color(0xFF5A4516)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: const Color(0xFF1A1F2B),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+        border: Border.all(color: Colors.orange.withValues(alpha: 0.25)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -376,32 +422,33 @@ class _HomeScreenState extends State<HomeScreen> {
           Row(
             children: [
               Container(
-                width: 46,
-                height: 46,
+                width: 42,
+                height: 42,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.10),
+                  color: Colors.orange.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Icon(Icons.play_circle_outline_rounded, size: 26),
+                child: const Icon(Icons.fitness_center_rounded),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Entreno en curso',
                       style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white.withValues(alpha: 0.96),
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
-                      draft.title,
-                      style: const TextStyle(
-                        fontSize: 19,
-                        fontWeight: FontWeight.w800,
+                      '${draft.title} • ${_formatDraftAge(draft.startedAt)}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.white.withValues(alpha: 0.68),
                       ),
                     ),
                   ],
@@ -410,21 +457,13 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           const SizedBox(height: 14),
-          Text(
-            'Guardado automáticamente ${_formatDraftAge(draft.startedAt)}',
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.white.withValues(alpha: 0.82),
-            ),
-          ),
-          const SizedBox(height: 12),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
               _buildInfoPill('$exerciseCount ejercicios'),
               _buildInfoPill('$setCount series'),
-              if (draft.hasStartedRestTracking)
+              if (draft.currentRestSeconds > 0)
                 _buildInfoPill('Descanso ${draft.currentRestSeconds}s'),
             ],
           ),
@@ -432,18 +471,16 @@ class _HomeScreenState extends State<HomeScreen> {
           Row(
             children: [
               Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _discardDraft,
-                  icon: const Icon(Icons.delete_outline_rounded),
-                  label: const Text('Descartar'),
+                child: FilledButton(
+                  onPressed: _continueDraft,
+                  child: const Text('Continuar'),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: FilledButton.icon(
-                  onPressed: _continueDraft,
-                  icon: const Icon(Icons.play_arrow_rounded),
-                  label: const Text('Continuar'),
+                child: OutlinedButton(
+                  onPressed: _discardDraft,
+                  child: const Text('Descartar'),
                 ),
               ),
             ],
@@ -453,32 +490,304 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Resumen corto y visual de las métricas principales de la semana.
+  Widget _buildTopMetrics() {
+    final currentWeight = _dashboard.currentWeight;
+    final weeklyVolumeText = _dashboard.weeklyVolume > 0
+        ? '${_formatNumber(_dashboard.weeklyVolume)} kg'
+        : '—';
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _buildMetricCard(
+                label: 'Sesiones totales',
+                value: '${_dashboard.totalSessions}',
+                icon: Icons.history_rounded,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildMetricCard(
+                label: 'Esta semana',
+                value: '${_dashboard.weeklySessions}',
+                icon: Icons.calendar_today_rounded,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildMetricCard(
+                label: 'Volumen semanal',
+                value: weeklyVolumeText,
+                icon: Icons.local_fire_department_outlined,
+                hint: _dashboard.weeklySessions > 0
+                    ? 'Trabajo acumulado en tus sesiones de esta semana'
+                    : 'Aún no hay volumen registrado esta semana',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildMetricCard(
+                label: 'Peso actual',
+                value: currentWeight != null
+                    ? _formatWeight(currentWeight)
+                    : '—',
+                icon: Icons.monitor_weight_outlined,
+                hint: currentWeight != null
+                    ? 'Tomado de tu último registro corporal'
+                    : 'Añade un registro en Progreso para verlo aquí',
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  String _weeklyHeadline() {
+    final weeklySessions = _dashboard.weeklySessions;
+
+    if (weeklySessions >= 4) return 'Semana muy sólida';
+    if (weeklySessions >= 2) return 'Semana en buen ritmo';
+    if (weeklySessions == 1) return 'Ya has arrancado la semana';
+    return 'Tu semana aún está vacía';
+  }
+
+  String _weeklySubtitle() {
+    final weeklySessions = _dashboard.weeklySessions;
+    final volume = _dashboard.weeklyVolume;
+
+    if (weeklySessions <= 0) {
+      return 'Un entrenamiento hoy ya te pone en marcha.';
+    }
+
+    if (volume > 0) {
+      return '$weeklySessions entrenos y ${_formatNumber(volume)} kg de volumen acumulado.';
+    }
+
+    return '$weeklySessions entrenos registrados esta semana.';
+  }
+
+  Color _weeklyAccent() {
+    final weeklySessions = _dashboard.weeklySessions;
+
+    if (weeklySessions >= 4) return const Color(0xFF4FC3F7);
+    if (weeklySessions >= 2) return const Color(0xFF81C784);
+    if (weeklySessions == 1) return const Color(0xFFFFD54F);
+    return const Color(0xFFE57373);
+  }
+
+  Widget _buildWeeklyFocusCard() {
+    final accent = _weeklyAccent();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1F2B),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: accent.withValues(alpha: 0.22)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(Icons.insights_outlined, color: accent),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _weeklyHeadline(),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  _weeklySubtitle(),
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    height: 1.4,
+                    color: Colors.white.withValues(alpha: 0.74),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _buildInfoPill('${_dashboard.weeklySessions} entrenos'),
+                    _buildInfoPill(
+                      _dashboard.weeklyVolume > 0
+                          ? '${_formatNumber(_dashboard.weeklyVolume)} kg'
+                          : '0 kg',
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  IconData _goalIcon(String goal) {
+    final normalized = goal.trim().toLowerCase();
+
+    if (normalized.contains('volumen')) return Icons.trending_up_rounded;
+    if (normalized.contains('defin')) return Icons.track_changes_rounded;
+    if (normalized.contains('perd')) return Icons.monitor_weight_outlined;
+    if (normalized.contains('gan')) return Icons.fitness_center_rounded;
+    return Icons.flag_outlined;
+  }
+
+  String _goalSubtitle() {
+    final profile = _dashboard.profile;
+    final currentWeight = _dashboard.currentWeight;
+    final targetWeight = profile.targetWeight;
+
+    if (targetWeight == null && currentWeight == null) {
+      return 'Configura tu objetivo y añade registros corporales para seguir mejor tu progreso.';
+    }
+
+    if (targetWeight != null && currentWeight == null) {
+      return 'Objetivo marcado en ${_formatWeight(targetWeight)}. Falta un registro actual para medir distancia.';
+    }
+
+    if (targetWeight == null && currentWeight != null) {
+      return 'Tu peso actual registrado es ${_formatWeight(currentWeight)}. Añade un peso objetivo para seguir la diferencia.';
+    }
+
+    final diff = (targetWeight! - currentWeight!).abs();
+    final toward = targetWeight > currentWeight ? 'por ganar' : 'por bajar';
+
+    if (diff == 0) {
+      return 'Ya estás exactamente en tu peso objetivo.';
+    }
+
+    return 'Te quedan ${_formatNumber(diff)} kg $toward para llegar a ${_formatWeight(targetWeight)}.';
+  }
+
+  Widget _buildGoalCard() {
+    final profile = _dashboard.profile;
+    final currentWeight = _dashboard.currentWeight;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1F2B),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(_goalIcon(profile.goal)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Objetivo actual',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _buildInfoPill(
+                profile.goal.isEmpty ? 'Sin objetivo' : profile.goal,
+              ),
+              if (profile.targetWeight != null)
+                _buildInfoPill('Meta ${_formatWeight(profile.targetWeight!)}'),
+              if (currentWeight != null)
+                _buildInfoPill('Actual ${_formatWeight(currentWeight)}'),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            _goalSubtitle(),
+            style: TextStyle(
+              fontSize: 13.5,
+              height: 1.45,
+              color: Colors.white.withValues(alpha: 0.74),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildLastSessionCard() {
     final session = _dashboard.lastSession;
-
     if (session == null) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.04),
+          color: const Color(0xFF1A1F2B),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Último entrenamiento',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 10),
             Text(
-              'Todavía no has guardado entrenamientos.\nCuando registres el primero aparecerá aquí.',
+              'Último entrenamiento',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Todavía no has guardado sesiones. Cuando registres tu primer entrenamiento aparecerá aquí con su resumen.',
               style: TextStyle(
+                fontSize: 13.5,
                 height: 1.45,
-                color: Colors.white.withValues(alpha: 0.74),
+                color: Colors.white.withValues(alpha: 0.72),
               ),
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: () => _openAndRefresh(
+                WorkoutScreen(
+                  title: 'Entrenamiento libre',
+                  availableExercises: ExerciseCatalog.allExercises,
+                ),
+              ),
+              icon: const Icon(Icons.play_arrow_rounded),
+              label: const Text('Crear primer entrenamiento'),
             ),
           ],
         ),
@@ -492,7 +801,7 @@ class _HomeScreenState extends State<HomeScreen> {
         width: double.infinity,
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.04),
+          color: const Color(0xFF1A1F2B),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
         ),
@@ -501,57 +810,43 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Row(
               children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Icon(Icons.history_rounded, size: 26),
-                ),
-                const SizedBox(width: 14),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Último entrenamiento',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        session.routineName,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    'Último entrenamiento',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
-                const Icon(Icons.chevron_right_rounded, size: 28),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: Colors.white.withValues(alpha: 0.55),
+                ),
               ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             Text(
-              '${_formatDate(session.startedAt)} • ${_formatTime(session.startedAt)}',
+              session.routineName,
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '${_formatLongDate(session.startedAt)} • ${_formatTime(session.startedAt)} • ${_formatDaysSince(session.startedAt)}',
               style: TextStyle(
                 fontSize: 13,
-                color: Colors.white.withValues(alpha: 0.74),
+                color: Colors.white.withValues(alpha: 0.70),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
                 _buildInfoPill('${session.totalExercises} ejercicios'),
                 _buildInfoPill('${session.totalSets} series'),
-                _buildInfoPill('${_formatWeight(session.totalVolume)} kg'),
+                _buildInfoPill(_formatWeight(session.totalVolume)),
+                _buildInfoPill(_formatDuration(session.durationSeconds)),
               ],
             ),
           ],
@@ -560,326 +855,207 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildActivityCard() {
-    final activities = _dashboard.recentActivities;
+  Widget _buildRecentActivitySection() {
+    final activities = _dashboard.recentActivities
+        .whereType<DashboardActivityItem>()
+        .toList();
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
+        color: const Color(0xFF1A1F2B),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Actividad reciente',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 14),
-          Column(
-            children: activities.map((item) {
-              final isLast = item == activities.last;
-
-              return Padding(
-                padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: const Icon(
-                        Icons.bolt_rounded,
-                        size: 20,
-                        color: Colors.white70,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.04),
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item.title,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              item.subtitle,
-                              style: TextStyle(
-                                fontSize: 13,
-                                height: 1.4,
-                                color: Colors.white.withValues(alpha: 0.72),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-          ),
+          if (activities.isEmpty)
+            Text(
+              'Todavía no hay actividad reciente para mostrar.',
+              style: TextStyle(
+                fontSize: 13.5,
+                color: Colors.white.withValues(alpha: 0.72),
+              ),
+            )
+          else ...[
+            for (int i = 0; i < activities.length; i++) ...[
+              _ActivityTile(item: activities[i]),
+              if (i != activities.length - 1) ...[
+                const SizedBox(height: 10),
+                Divider(height: 1, color: Colors.white.withValues(alpha: 0.06)),
+                const SizedBox(height: 10),
+              ],
+            ],
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildObjectiveCard() {
-    final profile = _dashboard.profile;
-    final currentWeight = _dashboard.currentWeight;
-    final targetWeight = profile.targetWeight;
+  Widget _buildQuickInsightStrip() {
+    final latestEntry = _dashboard.latestProgressEntry;
+    final lastSession = _dashboard.lastSession;
 
-    String statusText = profile.goal;
-    String detailText =
-        'Configura un objetivo corporal en Progreso para que XaFit tenga más contexto sobre tu evolución.';
-    double? difference;
-    bool? isOnTargetDirection;
-
-    if (targetWeight != null && currentWeight != null) {
-      difference = (targetWeight - currentWeight).abs();
-
-      if (profile.goal.toLowerCase().contains('bajar')) {
-        isOnTargetDirection = currentWeight <= targetWeight;
-      } else if (profile.goal.toLowerCase().contains('subir')) {
-        isOnTargetDirection = currentWeight >= targetWeight;
-      }
-
-      detailText =
-          'Actual ${_formatWeight(currentWeight)} kg • objetivo ${_formatWeight(targetWeight)} kg';
-    } else if (targetWeight != null) {
-      detailText =
-          'Objetivo configurado en ${_formatWeight(targetWeight)} kg.\nRegistra tu peso actual para compararlo.';
+    String leftTitle = 'Sin registro corporal';
+    String leftValue = 'Añade uno en Progreso';
+    if (latestEntry != null) {
+      leftTitle = 'Último peso';
+      leftValue =
+          '${_formatWeight(latestEntry.weight)} • ${_formatDate(latestEntry.date)}';
     }
 
-    final Color statusColor = isOnTargetDirection == null
-        ? const Color(0xFF4FC3F7)
-        : isOnTargetDirection
-        ? const Color(0xFF4ADE80)
-        : const Color(0xFFFBBF24);
+    String rightTitle = 'Sin último entreno';
+    String rightValue = 'Crea una sesión';
+    if (lastSession != null) {
+      rightTitle = 'Última sesión';
+      rightValue =
+          '${lastSession.totalSets} series • ${_formatDaysSince(lastSession.startedAt)}';
+    }
 
-    final String statusLabel = isOnTargetDirection == null
-        ? 'Objetivo activo'
-        : isOnTargetDirection
-        ? 'Objetivo alcanzado'
-        : 'En progreso';
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Objetivo actual',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+    return Row(
+      children: [
+        Expanded(
+          child: _buildMetricCard(
+            label: leftTitle,
+            value: leftValue,
+            icon: Icons.show_chart_rounded,
           ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  statusText,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  statusLabel,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: statusColor,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            detailText,
-            style: TextStyle(
-              fontSize: 13,
-              height: 1.45,
-              color: Colors.white.withValues(alpha: 0.74),
-            ),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              _buildObjectiveMiniBox(
-                label: 'Peso actual',
-                value: currentWeight != null
-                    ? '${_formatWeight(currentWeight)} kg'
-                    : '--',
-              ),
-              const SizedBox(width: 10),
-              _buildObjectiveMiniBox(
-                label: 'Peso objetivo',
-                value: targetWeight != null
-                    ? '${_formatWeight(targetWeight)} kg'
-                    : '--',
-              ),
-              const SizedBox(width: 10),
-              _buildObjectiveMiniBox(
-                label: 'Diferencia',
-                value: difference != null
-                    ? '${_formatWeight(difference)} kg'
-                    : '--',
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildObjectiveMiniBox({
-    required String label,
-    required String value,
-  }) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.04),
-          borderRadius: BorderRadius.circular(18),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11.5,
-                color: Colors.white.withValues(alpha: 0.68),
-              ),
-            ),
-          ],
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildMetricCard(
+            label: rightTitle,
+            value: rightValue,
+            icon: Icons.bolt_rounded,
+          ),
         ),
-      ),
+      ],
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final currentWeight = _dashboard.currentWeight != null
-        ? '${_formatWeight(_dashboard.currentWeight!)} kg'
-        : '--';
-
-    final weeklyVolume =
-        '${DashboardService.formatNumber(_dashboard.weeklyVolume)} kg';
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('XaFit'),
-        actions: [
-          IconButton(
-            onPressed: _refreshHome,
-            icon: const Icon(Icons.refresh_rounded),
-          ),
+    final body = RefreshIndicator(
+      onRefresh: _refreshHome,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+        children: [
+          _buildHeroCard(),
+          if (_activeDraft != null) ...[
+            const SizedBox(height: 16),
+            _buildDraftBanner(_activeDraft!),
+          ],
+          const SizedBox(height: 20),
+          _buildSectionTitle('Resumen'),
+          const SizedBox(height: 12),
+          _buildTopMetrics(),
+          const SizedBox(height: 12),
+          _buildQuickInsightStrip(),
+          const SizedBox(height: 20),
+          _buildSectionTitle('Enfoque de la semana'),
+          const SizedBox(height: 12),
+          _buildWeeklyFocusCard(),
+          const SizedBox(height: 20),
+          _buildSectionTitle('Objetivo actual'),
+          const SizedBox(height: 12),
+          _buildGoalCard(),
+          const SizedBox(height: 20),
+          _buildSectionTitle('Último entrenamiento'),
+          const SizedBox(height: 12),
+          _buildLastSessionCard(),
+          const SizedBox(height: 20),
+          _buildSectionTitle('Actividad reciente'),
+          const SizedBox(height: 12),
+          _buildRecentActivitySection(),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _refreshHome,
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-                children: [
-                  _buildHeroCard(),
-                  if (_activeDraft != null &&
-                      _activeDraft!.exercises.isNotEmpty) ...[
-                    const SizedBox(height: 14),
-                    _buildActiveDraftBanner(),
-                  ],
-                  const SizedBox(height: 18),
-                  Row(
-                    children: [
-                      _buildMetricCard(
-                        label: 'Entrenos totales',
-                        value: '${_dashboard.totalSessions}',
-                        icon: Icons.fitness_center_rounded,
-                      ),
-                      const SizedBox(width: 10),
-                      _buildMetricCard(
-                        label: 'Peso actual',
-                        value: currentWeight,
-                        icon: Icons.monitor_weight_outlined,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      _buildMetricCard(
-                        label: 'Entrenos semana',
-                        value: '${_dashboard.weeklySessions}',
-                        icon: Icons.calendar_today_rounded,
-                      ),
-                      const SizedBox(width: 10),
-                      _buildMetricCard(
-                        label: 'Volumen semana',
-                        value: weeklyVolume,
-                        icon: Icons.bar_chart_rounded,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 22),
-                  _buildSectionTitle('Último entrenamiento'),
-                  const SizedBox(height: 12),
-                  _buildLastSessionCard(),
-                  const SizedBox(height: 22),
-                  _buildSectionTitle('Actividad reciente'),
-                  const SizedBox(height: 12),
-                  _buildActivityCard(),
-                  const SizedBox(height: 22),
-                  _buildSectionTitle('Objetivo actual'),
-                  const SizedBox(height: 12),
-                  _buildObjectiveCard(),
-                ],
+    );
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Inicio')),
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 220),
+        child: _isLoading
+            ? const Center(
+                key: ValueKey('loading'),
+                child: CircularProgressIndicator(),
+              )
+            : KeyedSubtree(key: const ValueKey('content'), child: body),
+      ),
+    );
+  }
+}
+
+/// Tile de actividad simple para mantener la lista limpia y visual.
+class _ActivityTile extends StatelessWidget {
+  final DashboardActivityItem item;
+
+  const _ActivityTile({required this.item});
+
+  IconData _iconForId() {
+    switch (item.id) {
+      case 'last_workout':
+        return Icons.fitness_center_rounded;
+      case 'latest_body_entry':
+        return Icons.monitor_weight_outlined;
+      case 'weekly_summary':
+        return Icons.insights_outlined;
+      case 'weekly_empty':
+        return Icons.event_busy_outlined;
+      case 'first_steps':
+        return Icons.flag_outlined;
+      default:
+        return Icons.bolt_rounded;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Icon(_iconForId(), size: 20),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                item.title,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-            ),
+              const SizedBox(height: 4),
+              Text(
+                item.subtitle,
+                style: TextStyle(
+                  fontSize: 13,
+                  height: 1.4,
+                  color: Colors.white.withValues(alpha: 0.72),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
