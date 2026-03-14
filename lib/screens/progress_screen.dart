@@ -335,7 +335,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
             children: [
               CircleAvatar(
                 radius: 28,
-                backgroundColor: Colors.white.withOpacity(0.12),
+                backgroundColor: Colors.white.withValues(alpha: 0.12),
                 child: Text(
                   (_profile.alias.isNotEmpty ? _profile.alias[0] : 'U')
                       .toUpperCase(),
@@ -360,7 +360,9 @@ class _ProgressScreenState extends State<ProgressScreen> {
                     const SizedBox(height: 4),
                     Text(
                       _profile.goal.isEmpty ? 'Sin objetivo' : _profile.goal,
-                      style: TextStyle(color: Colors.white.withOpacity(0.82)),
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.82),
+                      ),
                     ),
                   ],
                 ),
@@ -492,7 +494,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
               points.isEmpty
                   ? 'Aún no hay datos para esta métrica'
                   : '${points.length} registros disponibles',
-              style: TextStyle(color: Colors.white.withOpacity(0.70)),
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.70)),
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -501,7 +503,9 @@ class _ProgressScreenState extends State<ProgressScreen> {
                   ? Center(
                       child: Text(
                         'Añade registros para ver la gráfica',
-                        style: TextStyle(color: Colors.white.withOpacity(0.70)),
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.70),
+                        ),
                       ),
                     )
                   : _MiniLineChart(
@@ -533,7 +537,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                 padding: const EdgeInsets.only(top: 10, bottom: 14),
                 child: Text(
                   'Todavía no tienes registros corporales.',
-                  style: TextStyle(color: Colors.white.withOpacity(0.70)),
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.70)),
                 ),
               )
             else
@@ -541,8 +545,10 @@ class _ProgressScreenState extends State<ProgressScreen> {
                 itemCount: _entries.length,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                separatorBuilder: (_, __) =>
-                    Divider(height: 18, color: Colors.white.withOpacity(0.08)),
+                separatorBuilder: (_, __) => Divider(
+                  height: 18,
+                  color: Colors.white.withValues(alpha: 0.08),
+                ),
                 itemBuilder: (context, index) {
                   final entry = _entries[_entries.length - 1 - index];
 
@@ -552,7 +558,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                       width: 42,
                       height: 42,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.08),
+                        color: Colors.white.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(Icons.monitor_heart_outlined),
@@ -630,7 +636,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
             Icon(
               Icons.insights_outlined,
               size: 64,
-              color: Colors.white.withOpacity(0.75),
+              color: Colors.white.withValues(alpha: 0.75),
             ),
             const SizedBox(height: 16),
             const Text(
@@ -642,7 +648,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
             Text(
               'Guarda tu primer peso o medición corporal para empezar a ver tu evolución.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white.withOpacity(0.72)),
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.72)),
             ),
             const SizedBox(height: 20),
             FilledButton.icon(
@@ -727,7 +733,7 @@ class _InfoChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.08),
+        color: Colors.white.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -737,7 +743,7 @@ class _InfoChip extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: 11,
-              color: Colors.white.withOpacity(0.72),
+              color: Colors.white.withValues(alpha: 0.72),
             ),
           ),
           const SizedBox(height: 4),
@@ -775,7 +781,7 @@ class _MetricCard extends StatelessWidget {
               title,
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.white.withOpacity(0.72),
+                color: Colors.white.withValues(alpha: 0.72),
               ),
             ),
             const SizedBox(height: 4),
@@ -788,7 +794,7 @@ class _MetricCard extends StatelessWidget {
               subtitle,
               style: TextStyle(
                 fontSize: 11,
-                color: Colors.white.withOpacity(0.62),
+                color: Colors.white.withValues(alpha: 0.62),
               ),
             ),
           ],
@@ -808,7 +814,7 @@ class _HistoryTag extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.06),
+        color: Colors.white.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(label, style: const TextStyle(fontSize: 11)),
@@ -863,7 +869,7 @@ class _MiniLineChart extends StatelessWidget {
               '${minDate.day}/${minDate.month} - ${maxDate.day}/${maxDate.month}',
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.white.withOpacity(0.65),
+                color: Colors.white.withValues(alpha: 0.65),
               ),
             ),
           ],
@@ -875,8 +881,8 @@ class _MiniLineChart extends StatelessWidget {
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(18),
-                color: Colors.white.withOpacity(0.02),
-                border: Border.all(color: Colors.white.withOpacity(0.06)),
+                color: Colors.white.withValues(alpha: 0.02),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
               ),
               padding: const EdgeInsets.all(12),
               child: Column(
@@ -916,7 +922,7 @@ class _ChartLegendItem extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -926,7 +932,7 @@ class _ChartLegendItem extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: 11,
-              color: Colors.white.withOpacity(0.68),
+              color: Colors.white.withValues(alpha: 0.68),
             ),
           ),
           const SizedBox(height: 2),
@@ -949,7 +955,10 @@ class _AxisLabel extends StatelessWidget {
       alignment: alignLeft ? Alignment.centerLeft : Alignment.centerRight,
       child: Text(
         text,
-        style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.55)),
+        style: TextStyle(
+          fontSize: 11,
+          color: Colors.white.withValues(alpha: 0.55),
+        ),
       ),
     );
   }
@@ -981,7 +990,7 @@ class _LineChartPainter extends CustomPainter {
         : (maxValue - minValue);
 
     final gridPaint = Paint()
-      ..color = Colors.white.withOpacity(0.06)
+      ..color = Colors.white.withValues(alpha: 0.06)
       ..strokeWidth = 1;
 
     for (int i = 0; i < 3; i++) {
@@ -1022,8 +1031,8 @@ class _LineChartPainter extends CustomPainter {
         ..shader =
             LinearGradient(
               colors: [
-                Colors.lightBlueAccent.withOpacity(0.25),
-                Colors.lightBlueAccent.withOpacity(0.02),
+                Colors.lightBlueAccent.withValues(alpha: 0.25),
+                Colors.lightBlueAccent.withValues(alpha: 0.02),
               ],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,

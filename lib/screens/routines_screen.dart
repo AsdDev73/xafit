@@ -58,7 +58,7 @@ class _RoutineCard extends StatelessWidget {
                 width: 54,
                 height: 54,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.08),
+                  color: Colors.white.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: const Icon(Icons.folder_special_rounded, size: 28),
@@ -80,7 +80,7 @@ class _RoutineCard extends StatelessWidget {
                       routine.description,
                       style: TextStyle(
                         fontSize: 13,
-                        color: Colors.white.withOpacity(0.70),
+                        color: Colors.white.withValues(alpha: 0.70),
                       ),
                     ),
                     const SizedBox(height: 10),

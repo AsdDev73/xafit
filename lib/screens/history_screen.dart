@@ -275,7 +275,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.06),
+        color: Colors.white.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
@@ -293,7 +293,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
@@ -311,9 +311,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.04),
+        color: Colors.white.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -417,7 +417,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     width: 52,
                     height: 52,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.08),
+                      color: Colors.white.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: const Icon(Icons.history_rounded, size: 28),
@@ -439,7 +439,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           '${_formatDate(session.startedAt)} • ${_formatTime(session.startedAt)}',
                           style: TextStyle(
                             fontSize: 13,
-                            color: Colors.white.withOpacity(0.70),
+                            color: Colors.white.withValues(alpha: 0.70),
                           ),
                         ),
                       ],
@@ -502,7 +502,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     width: 72,
                     height: 72,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.06),
+                      color: Colors.white.withValues(alpha: 0.06),
                       borderRadius: BorderRadius.circular(22),
                     ),
                     child: const Icon(Icons.history_rounded, size: 34),
@@ -519,7 +519,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       height: 1.45,
-                      color: Colors.white.withOpacity(0.72),
+                      color: Colors.white.withValues(alpha: 0.72),
                     ),
                   ),
                 ],
@@ -546,7 +546,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   width: 68,
                   height: 68,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.06),
+                    color: Colors.white.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Icon(Icons.filter_alt_off_rounded, size: 32),
@@ -563,7 +563,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     height: 1.45,
-                    color: Colors.white.withOpacity(0.72),
+                    color: Colors.white.withValues(alpha: 0.72),
                   ),
                 ),
               ],

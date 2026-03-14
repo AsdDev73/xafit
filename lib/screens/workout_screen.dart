@@ -844,7 +844,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
         borderRadius: BorderRadius.circular(26),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.18),
+            color: Colors.black.withValues(alpha: 0.18),
             blurRadius: 18,
             offset: const Offset(0, 10),
           ),
@@ -869,7 +869,9 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                     const SizedBox(height: 6),
                     Text(
                       'Entrenamiento libre',
-                      style: TextStyle(color: Colors.white.withOpacity(0.78)),
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.78),
+                      ),
                     ),
                   ],
                 ),
@@ -880,7 +882,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.10),
+                  color: Colors.white.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(18),
                 ),
                 child: Column(
@@ -890,7 +892,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                       'Tiempo',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.white.withOpacity(0.72),
+                        color: Colors.white.withValues(alpha: 0.72),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -1012,7 +1014,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       decoration: BoxDecoration(
         color: _panelSoftColor,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Row(
         children: [
@@ -1020,7 +1022,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.07),
+              color: Colors.white.withValues(alpha: 0.07),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(
@@ -1100,7 +1102,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                   width: 46,
                   height: 46,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.08),
+                    color: Colors.white.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: const Icon(Icons.sports_gymnastics_rounded),
@@ -1173,7 +1175,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                     padding: const EdgeInsets.only(left: 4),
                     child: Icon(
                       Icons.drag_handle_rounded,
-                      color: Colors.white.withOpacity(0.70),
+                      color: Colors.white.withValues(alpha: 0.70),
                     ),
                   ),
                 ),
@@ -1187,9 +1189,11 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.03),
+                  color: Colors.white.withValues(alpha: 0.03),
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: Colors.white.withOpacity(0.05)),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.05),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1204,7 +1208,9 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                     const SizedBox(height: 6),
                     Text(
                       'Añade la primera serie para empezar a registrar este ejercicio.',
-                      style: TextStyle(color: Colors.white.withOpacity(0.72)),
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.72),
+                      ),
                     ),
                     const SizedBox(height: 14),
                     FilledButton.icon(
@@ -1257,7 +1263,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       decoration: BoxDecoration(
         color: _panelColor,
         borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Column(
         children: [
@@ -1265,7 +1271,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
             width: 70,
             height: 70,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.06),
+              color: Colors.white.withValues(alpha: 0.06),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.fitness_center_rounded, size: 34),
@@ -1281,7 +1287,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
             'Añade ejercicios y registra series con peso, repeticiones y descanso automático.',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.74),
+              color: Colors.white.withValues(alpha: 0.74),
               height: 1.45,
             ),
           ),
@@ -1339,21 +1345,23 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                     decoration: BoxDecoration(
                       color: _panelSoftColor,
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: Colors.white.withOpacity(0.05)),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.05),
+                      ),
                     ),
                     child: Row(
                       children: [
                         Icon(
                           Icons.info_outline_rounded,
                           size: 18,
-                          color: Colors.white.withOpacity(0.78),
+                          color: Colors.white.withValues(alpha: 0.78),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             'Mantén el icono de arrastre para reordenar ejercicios.',
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.78),
+                              color: Colors.white.withValues(alpha: 0.78),
                             ),
                           ),
                         ),
@@ -1442,7 +1450,7 @@ class _SummaryChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.08),
+        color: Colors.white.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
@@ -1458,7 +1466,7 @@ class _SummaryChip extends StatelessWidget {
                 label,
                 style: TextStyle(
                   fontSize: 11,
-                  color: Colors.white.withOpacity(0.72),
+                  color: Colors.white.withValues(alpha: 0.72),
                 ),
               ),
               const SizedBox(height: 2),
@@ -1488,7 +1496,7 @@ class _MiniTagChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.06),
+        color: Colors.white.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
@@ -1514,7 +1522,7 @@ class _QuickFillChip extends StatelessWidget {
     return ActionChip(
       label: Text(label),
       onPressed: onTap,
-      backgroundColor: Colors.white.withOpacity(0.08),
+      backgroundColor: Colors.white.withValues(alpha: 0.08),
       side: BorderSide.none,
       labelStyle: const TextStyle(fontSize: 12),
     );
@@ -1532,7 +1540,7 @@ class _QuickAdjustChip extends StatelessWidget {
     return ActionChip(
       label: Text(label),
       onPressed: onTap,
-      backgroundColor: Colors.white.withOpacity(0.06),
+      backgroundColor: Colors.white.withValues(alpha: 0.06),
       side: BorderSide.none,
       labelStyle: const TextStyle(fontSize: 12),
     );
@@ -1611,7 +1619,7 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
                 width: 44,
                 height: 5,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.18),
+                  color: Colors.white.withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
@@ -1624,7 +1632,7 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
             const SizedBox(height: 6),
             Text(
               'Busca por nombre, tag o grupo muscular',
-              style: TextStyle(color: Colors.white.withOpacity(0.72)),
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.72)),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -1679,7 +1687,7 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
             const SizedBox(height: 14),
             Text(
               '${exercises.length} ejercicios disponibles',
-              style: TextStyle(color: Colors.white.withOpacity(0.72)),
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.72)),
             ),
             const SizedBox(height: 10),
             Flexible(
@@ -1691,7 +1699,7 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
                           'No hay ejercicios que coincidan con tu búsqueda',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.72),
+                            color: Colors.white.withValues(alpha: 0.72),
                           ),
                         ),
                       ),
@@ -1704,7 +1712,7 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
                         final exercise = exercises[index];
 
                         return Material(
-                          color: Colors.white.withOpacity(0.03),
+                          color: Colors.white.withValues(alpha: 0.03),
                           borderRadius: BorderRadius.circular(18),
                           child: InkWell(
                             borderRadius: BorderRadius.circular(18),
@@ -1717,7 +1725,9 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
                                     width: 42,
                                     height: 42,
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.08),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.08,
+                                      ),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: const Icon(
@@ -1741,8 +1751,8 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
                                         Text(
                                           exercise.muscleGroup,
                                           style: TextStyle(
-                                            color: Colors.white.withOpacity(
-                                              0.72,
+                                            color: Colors.white.withValues(
+                                              alpha: 0.72,
                                             ),
                                           ),
                                         ),
@@ -1920,7 +1930,7 @@ class _SetEditorSheetState extends State<_SetEditorSheet> {
                 width: 44,
                 height: 5,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.18),
+                  color: Colors.white.withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
@@ -1933,7 +1943,7 @@ class _SetEditorSheetState extends State<_SetEditorSheet> {
             const SizedBox(height: 6),
             Text(
               widget.exerciseName,
-              style: TextStyle(color: Colors.white.withOpacity(0.72)),
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.72)),
             ),
             const SizedBox(height: 16),
             Container(
@@ -1942,7 +1952,7 @@ class _SetEditorSheetState extends State<_SetEditorSheet> {
               decoration: BoxDecoration(
                 color: widget.panelColor,
                 borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: Colors.white.withOpacity(0.05)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -2072,7 +2082,7 @@ class _SetEditorSheetState extends State<_SetEditorSheet> {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.04),
+                color: Colors.white.withValues(alpha: 0.04),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Column(

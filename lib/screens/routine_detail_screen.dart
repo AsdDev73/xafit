@@ -200,7 +200,7 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.08),
+            color: Colors.white.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(12),
           ),
           child: const Icon(Icons.sports_gymnastics_rounded),
@@ -228,7 +228,7 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.06),
+                      color: Colors.white.withValues(alpha: 0.06),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(label, style: const TextStyle(fontSize: 11)),
@@ -245,8 +245,8 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
                 color: exercise.isCustom
-                    ? Colors.orange.withOpacity(0.18)
-                    : Colors.blue.withOpacity(0.18),
+                    ? Colors.orange.withValues(alpha: 0.18)
+                    : Colors.blue.withValues(alpha: 0.18),
                 borderRadius: BorderRadius.circular(30),
               ),
               child: Text(
@@ -331,7 +331,7 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
                           '${_allExercises.length} ejercicios disponibles',
                           style: TextStyle(
                             fontSize: 13,
-                            color: Colors.white.withOpacity(0.85),
+                            color: Colors.white.withValues(alpha: 0.85),
                           ),
                         ),
                         const SizedBox(height: 14),
@@ -404,7 +404,7 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
                       '${exercises.length} resultados',
                       style: TextStyle(
                         fontSize: 13,
-                        color: Colors.white.withOpacity(0.75),
+                        color: Colors.white.withValues(alpha: 0.75),
                       ),
                     ),
                   ),
@@ -415,7 +415,7 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
                             child: Text(
                               'No hay ejercicios que coincidan con tu búsqueda',
                               style: TextStyle(
-                                color: Colors.white.withOpacity(0.75),
+                                color: Colors.white.withValues(alpha: 0.75),
                               ),
                             ),
                           )

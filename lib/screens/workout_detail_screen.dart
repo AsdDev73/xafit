@@ -127,7 +127,7 @@ class WorkoutDetailScreen extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.08),
+          color: Colors.white.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(18),
         ),
         child: Column(
@@ -144,7 +144,7 @@ class WorkoutDetailScreen extends StatelessWidget {
               label,
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.white.withOpacity(0.72),
+                color: Colors.white.withValues(alpha: 0.72),
               ),
             ),
           ],
@@ -157,7 +157,7 @@ class WorkoutDetailScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.06),
+        color: Colors.white.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(text, style: const TextStyle(fontSize: 11.5)),
@@ -169,7 +169,7 @@ class WorkoutDetailScreen extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
@@ -217,7 +217,7 @@ class WorkoutDetailScreen extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               exercise.muscleGroup,
-              style: TextStyle(color: Colors.white.withOpacity(0.72)),
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.72)),
             ),
             const SizedBox(height: 12),
             Wrap(
@@ -279,7 +279,7 @@ class WorkoutDetailScreen extends StatelessWidget {
                   dateText,
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.white.withOpacity(0.90),
+                    color: Colors.white.withValues(alpha: 0.90),
                   ),
                 ),
                 if (session.sessionTags.isNotEmpty) ...[
@@ -363,7 +363,10 @@ class _SetMetricCell extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           label,
-          style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.62)),
+          style: TextStyle(
+            fontSize: 11,
+            color: Colors.white.withValues(alpha: 0.62),
+          ),
         ),
       ],
     );
