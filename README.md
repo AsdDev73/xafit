@@ -186,5 +186,160 @@ Persistencia principal con **Drift**.
 ### Importante
 Si se modifica `app_database.dart`, hay que regenerar los archivos con:
 
-```bash
-flutter pub run build_runner build --delete-conflicting-outputs
+    flutter pub run build_runner build --delete-conflicting-outputs
+
+---
+
+## Estado de plataforma
+
+### Android
+Es la plataforma principal en este momento y donde está centrado el desarrollo.
+
+### iOS
+Está previsto como siguiente fase del proyecto.  
+La intención es preparar XaFit para uso real en iPhone, pero el foco actual ha sido primero consolidar la base funcional y offline en Android.
+
+### Web
+Se usa como apoyo visual y para desarrollo rápido, pero no es la plataforma objetivo del producto.
+
+---
+
+## Decisiones técnicas tomadas
+
+- Prioridad real: **Android / iPhone**, no web
+- Mantener la web solo como apoyo visual
+- **Drift** como base principal de persistencia en móvil
+- **Firebase no es la opción preferida**
+- Si en el futuro se añade sync/cloud, la opción más probable es **Supabase**
+- Antes de añadir sincronización, el objetivo es dejar XaFit robusta como app **offline-first**
+
+---
+
+## Problemas ya resueltos durante el desarrollo
+
+Algunos puntos técnicos importantes que ya se han resuelto:
+
+- Configuración Android y emulador funcionando
+- `flutter_local_notifications` arreglado con desugaring
+- Persistencia Drift validada en Android
+- Crash al guardar ejercicios personalizados solucionado moviendo diálogos a widgets propios
+- Crash al guardar series solucionado rehaciendo el bottom sheet de series
+- Textos corruptos por codificación corregidos
+- Overflow visual en cards de progreso corregido
+- Errores de imports ambiguos con `WorkoutDraft` / `WorkoutDraftService` corregidos
+- Sistema de borrador de entrenamiento saneado
+- `flutter analyze` limpio
+- Recordatorio semanal conectado y funcionando
+- Home mejorada visualmente para UX y portfolio
+
+---
+
+## Instalación
+
+### Requisitos
+- Flutter SDK
+- Dart SDK
+- Android Studio o VS Code
+- Dispositivo Android o emulador para pruebas principales
+
+### Clonar el proyecto
+
+    git clone https://github.com/AsdDev73/xafit.git
+    cd xafit
+
+### Instalar dependencias
+
+    flutter pub get
+
+### Generar código de Drift si hace falta
+
+    flutter pub run build_runner build --delete-conflicting-outputs
+
+### Ejecutar la app
+
+    flutter run
+
+### Ejecutar en Android
+
+    flutter run -d android
+
+### Ejecutar en Chrome como apoyo visual
+
+    flutter run -d chrome
+
+---
+
+## Estructura general del proyecto
+
+    lib/
+    ├── data/
+    ├── db/
+    ├── models/
+    ├── repositories/
+    ├── screens/
+    ├── services/
+    ├── widgets/
+    └── main.dart
+
+---
+
+## Repositorio
+
+GitHub: [https://github.com/AsdDev73/xafit](https://github.com/AsdDev73/xafit)
+
+---
+
+## Capturas
+
+Pendiente de añadir capturas reales de la app:
+
+- Home / Dashboard
+- Entrenamiento libre
+- Historial
+- Biblioteca
+- Progreso corporal
+- Recordatorio semanal
+- Backup
+
+---
+
+## Roadmap
+
+### Próximos pasos
+- Mejoras visuales adicionales en Home y flujo general
+- Mejoras de métricas y estadísticas
+- Mejoras de UX en historial y progreso
+- Preparación real para iOS
+- Pulido de onboarding / empty states
+- Capturas y presentación visual para portfolio
+
+### Futuro
+- Sincronización en la nube
+- Posible integración con Supabase
+- Más analítica y comparativas de progreso
+- Mejoras avanzadas de rendimiento y experiencia de usuario
+
+---
+
+## Filosofía del proyecto
+
+XaFit no pretende ser solo una demo técnica.  
+La idea es construir una app que se sienta como un producto real: útil, rápida, clara y bien estructurada.
+
+Por eso el proyecto prioriza:
+- usabilidad real
+- arquitectura limpia
+- persistencia estable
+- evolución progresiva sin romper lo que ya funciona
+
+---
+
+## Autor
+
+Desarrollado por **Antonio** como proyecto personal y de portfolio.
+
+---
+
+## Licencia
+
+Este proyecto se publica con fines de aprendizaje, portfolio y evolución personal como desarrollador.
