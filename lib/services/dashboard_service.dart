@@ -14,6 +14,7 @@ class DashboardOverview {
   final BodyProgressEntry? latestProgressEntry;
   final BodyProfile profile;
   final List<DashboardActivityItem> recentActivities;
+  final List<DashboardPersonalRecordItem> recentPrs;
 
   const DashboardOverview({
     required this.totalSessions,
@@ -24,6 +25,7 @@ class DashboardOverview {
     required this.latestProgressEntry,
     required this.profile,
     required this.recentActivities,
+    required this.recentPrs,
   });
 
   const DashboardOverview.empty()
@@ -34,7 +36,8 @@ class DashboardOverview {
       lastSession = null,
       latestProgressEntry = null,
       profile = BodyProfile.empty,
-      recentActivities = const [];
+      recentActivities = const [],
+      recentPrs = const [];
 }
 
 class DashboardActivityItem {
@@ -51,6 +54,22 @@ class DashboardActivityItem {
   });
 }
 
+class DashboardPersonalRecordItem {
+  final String exerciseId;
+  final String exerciseName;
+  final double weight;
+  final int reps;
+  final DateTime occurredAt;
+
+  const DashboardPersonalRecordItem({
+    required this.exerciseId,
+    required this.exerciseName,
+    required this.weight,
+    required this.reps,
+    required this.occurredAt,
+  });
+}
+
 class DashboardService {
   final WorkoutRepository workoutRepository;
   final BodyProfileRepository bodyProfileRepository;
@@ -63,9 +82,15 @@ class DashboardService {
   });
 
   Future<DashboardOverview> loadOverview() async {
-    final sessions = await workoutRepository.getAllSessions();
-    final progressEntries = await bodyProgressRepository.getEntries();
+    final rawSessions = await workoutRepository.getAllSessions();
+    final rawProgressEntries = await bodyProgressRepository.getEntries();
     final profile = await bodyProfileRepository.getProfile();
+
+    final sessions = List<WorkoutSession>.from(rawSessions)
+      ..sort((a, b) => b.startedAt.compareTo(a.startedAt));
+
+    final progressEntries = List<BodyProgressEntry>.from(rawProgressEntries)
+      ..sort((a, b) => b.date.compareTo(a.date));
 
     final now = DateTime.now();
     final startOfWeek = DateTime(
@@ -100,6 +125,8 @@ class DashboardService {
       weeklyVolume: weeklyVolume,
     );
 
+    final recentPrs = _buildRecentPrs(sessions: sessions);
+
     return DashboardOverview(
       totalSessions: sessions.length,
       weeklySessions: sessionsThisWeek.length,
@@ -111,6 +138,7 @@ class DashboardService {
           : null,
       profile: profile,
       recentActivities: activities,
+      recentPrs: recentPrs,
     );
   }
 
@@ -125,7 +153,6 @@ class DashboardService {
 
     if (sessions.isNotEmpty) {
       final lastSession = sessions.first;
-
       items.add(
         DashboardActivityItem(
           id: 'last_workout',
@@ -139,7 +166,6 @@ class DashboardService {
 
     if (progressEntries.isNotEmpty) {
       final latest = progressEntries.first;
-
       String metricsText = 'Peso ${_formatNumber(latest.weight)} kg';
 
       if (latest.bodyFat != null) {
@@ -195,6 +221,50 @@ class DashboardService {
     return items.take(3).toList();
   }
 
+  List<DashboardPersonalRecordItem> _buildRecentPrs({
+    required List<WorkoutSession> sessions,
+  }) {
+    final chronologicalSessions = List<WorkoutSession>.from(sessions)
+      ..sort((a, b) => a.startedAt.compareTo(b.startedAt));
+
+    final Map<String, _ExerciseBestMark> bestByExercise = {};
+    final List<DashboardPersonalRecordItem> prs = [];
+
+    for (final session in chronologicalSessions) {
+      for (final exercise in session.exercises) {
+        for (final set in exercise.sets) {
+          if (set.weight <= 0 || set.reps <= 0) continue;
+
+          final best = bestByExercise[exercise.exerciseId];
+          final isNewPr =
+              best == null ||
+              set.weight > best.weight ||
+              (set.weight == best.weight && set.reps > best.reps);
+
+          if (isNewPr) {
+            bestByExercise[exercise.exerciseId] = _ExerciseBestMark(
+              weight: set.weight,
+              reps: set.reps,
+            );
+
+            prs.add(
+              DashboardPersonalRecordItem(
+                exerciseId: exercise.exerciseId,
+                exerciseName: exercise.exerciseName,
+                weight: set.weight,
+                reps: set.reps,
+                occurredAt: set.createdAt,
+              ),
+            );
+          }
+        }
+      }
+    }
+
+    prs.sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
+    return prs.take(3).toList();
+  }
+
   static String formatNumber(double value) => _formatNumber(value);
 
   static String _formatNumber(double value) {
@@ -203,4 +273,11 @@ class DashboardService {
     }
     return value.toStringAsFixed(1);
   }
+}
+
+class _ExerciseBestMark {
+  final double weight;
+  final int reps;
+
+  const _ExerciseBestMark({required this.weight, required this.reps});
 }

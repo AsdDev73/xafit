@@ -35,7 +35,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
   @override
   void didUpdateWidget(covariant HistoryScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-
     if (oldWidget.refreshToken != widget.refreshToken) {
       _reloadSessions();
     }
@@ -49,6 +48,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   void _onFiltersChanged() {
+    if (!mounted) return;
     setState(() {});
   }
 
@@ -58,15 +58,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
     });
 
     final sessions = await _workoutRepository.getAllSessions();
+    final sortedSessions = List<WorkoutSession>.from(sessions)
+      ..sort((a, b) => b.startedAt.compareTo(a.startedAt));
 
     if (!mounted) return;
 
     setState(() {
-      _allSessions = sessions;
+      _allSessions = sortedSessions;
       _isLoading = false;
 
-      if (_selectedTag != null &&
-          !_availableTagsFromSessions(sessions).contains(_selectedTag)) {
+      final availableTags = _availableTagsFromSessions(sortedSessions);
+      if (_selectedTag != null && !availableTags.contains(_selectedTag)) {
         _selectedTag = null;
       }
     });
@@ -121,19 +123,30 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return '$hour:$minute';
   }
 
+  String _formatRelativeDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).difference(DateTime(date.year, date.month, date.day)).inDays;
+
+    if (difference <= 0) return 'Hoy';
+    if (difference == 1) return 'Ayer';
+    if (difference < 7) return 'Hace $difference días';
+    return _formatDate(date);
+  }
+
   String _formatDuration(int totalSeconds) {
     final hours = totalSeconds ~/ 3600;
     final minutes = (totalSeconds % 3600) ~/ 60;
-    final seconds = totalSeconds % 60;
 
     if (hours > 0) {
-      return '${hours.toString().padLeft(2, '0')}:'
-          '${minutes.toString().padLeft(2, '0')}:'
-          '${seconds.toString().padLeft(2, '0')}';
+      if (minutes == 0) return '$hours h';
+      return '$hours h $minutes min';
     }
 
-    return '${minutes.toString().padLeft(2, '0')}:'
-        '${seconds.toString().padLeft(2, '0')}';
+    return '$minutes min';
   }
 
   String _formatVolume(double value) {
@@ -171,7 +184,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
     final tags = <String>{};
     for (final session in sessions) {
-      tags.addAll(session.sessionTags);
+      tags.addAll(session.sessionTags.cast<String>());
     }
 
     final sorted = tags.toList()
@@ -195,15 +208,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
       case _HistoryDateFilter.all:
         return true;
       case _HistoryDateFilter.last7Days:
-        return session.startedAt.isAfter(now.subtract(const Duration(days: 7)));
+        final cutoff = now.subtract(const Duration(days: 7));
+        return !session.startedAt.isBefore(cutoff);
       case _HistoryDateFilter.last30Days:
-        return session.startedAt.isAfter(
-          now.subtract(const Duration(days: 30)),
-        );
+        final cutoff = now.subtract(const Duration(days: 30));
+        return !session.startedAt.isBefore(cutoff);
       case _HistoryDateFilter.last90Days:
-        return session.startedAt.isAfter(
-          now.subtract(const Duration(days: 90)),
-        );
+        final cutoff = now.subtract(const Duration(days: 90));
+        return !session.startedAt.isBefore(cutoff);
       case _HistoryDateFilter.thisYear:
         return session.startedAt.year == now.year;
     }
@@ -213,11 +225,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final query = _normalizeText(_searchController.text.trim());
 
     return _allSessions.where((session) {
+      final sessionTags = session.sessionTags.cast<String>();
       final matchesTag =
-          _selectedTag == null || session.sessionTags.contains(_selectedTag);
+          _selectedTag == null || sessionTags.contains(_selectedTag);
 
       final normalizedName = _normalizeText(session.routineName);
-      final normalizedTags = session.sessionTags.map(_normalizeText).toList();
+      final normalizedTags = sessionTags.map(_normalizeText).toList();
+
+      final exerciseNames = session.exercises
+          .map((exercise) => _normalizeText(exercise.exerciseName as String))
+          .toList();
 
       final matchesSearch =
           query.isEmpty ||
@@ -225,38 +242,86 @@ class _HistoryScreenState extends State<HistoryScreen> {
           normalizedTags.any((tag) => tag.contains(query)) ||
           normalizedTags.any(
             (tag) => _normalizeText(_displayTag(tag)).contains(query),
-          );
+          ) ||
+          exerciseNames.any((name) => name.contains(query));
 
       final matchesDate = _matchesDateFilter(session);
-
       return matchesTag && matchesSearch && matchesDate;
     }).toList();
   }
 
-  Future<void> _clearAllHistory() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Borrar historial'),
-          content: const Text(
-            'Esto eliminará todos los entrenamientos guardados.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Borrar'),
-            ),
-          ],
-        );
-      },
-    );
+  bool get _hasActiveFilters =>
+      _searchController.text.trim().isNotEmpty ||
+      _selectedTag != null ||
+      _selectedDateFilter != _HistoryDateFilter.all;
 
-    if (confirmed != true) return;
+  int get _sessionsThisWeek {
+    final now = DateTime.now();
+    final startOfWeek = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).subtract(Duration(days: now.weekday - 1));
+
+    return _allSessions.where((session) {
+      final sessionDate = DateTime(
+        session.startedAt.year,
+        session.startedAt.month,
+        session.startedAt.day,
+      );
+      return !sessionDate.isBefore(startOfWeek);
+    }).length;
+  }
+
+  double get _totalHistoryVolume {
+    return _allSessions.fold<double>(
+      0,
+      (sum, session) => sum + session.totalVolume,
+    );
+  }
+
+  double get _filteredVolume {
+    return _filteredSessions.fold<double>(
+      0,
+      (sum, session) => sum + session.totalVolume,
+    );
+  }
+
+  void _clearFilters() {
+    _searchController.clear();
+
+    setState(() {
+      _selectedTag = null;
+      _selectedDateFilter = _HistoryDateFilter.all;
+    });
+  }
+
+  Future<void> _clearAllHistory() async {
+    final confirmed =
+        await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) {
+            return AlertDialog(
+              title: const Text('Borrar historial'),
+              content: const Text(
+                'Esto eliminará todos los entrenamientos guardados.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                  child: const Text('Borrar'),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
+
+    if (!confirmed) return;
 
     await _workoutRepository.clearAllSessions();
     await _refresh();
@@ -271,6 +336,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
+  Future<void> _openSessionDetail(WorkoutSession session) async {
+    final navigator = Navigator.of(context);
+
+    await navigator.push(
+      MaterialPageRoute(builder: (_) => WorkoutDetailScreen(session: session)),
+    );
+
+    if (!mounted) return;
+    await _refresh();
+  }
+
   Widget _buildMetricPill(String text, IconData icon) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -283,7 +359,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
         children: [
           Icon(icon, size: 14, color: Colors.white70),
           const SizedBox(width: 6),
-          Text(text, style: const TextStyle(fontSize: 12)),
+          Text(
+            text,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          ),
         ],
       ),
     );
@@ -303,9 +382,159 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
+  Widget _buildSummaryCard({
+    required String label,
+    required String value,
+    required IconData icon,
+    String? hint,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: Colors.white70),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12.5,
+              color: Colors.white.withValues(alpha: 0.72),
+            ),
+          ),
+          if (hint != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              hint,
+              style: TextStyle(
+                fontSize: 11.5,
+                color: Colors.white.withValues(alpha: 0.56),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOverviewSection() {
+    final filteredSessions = _filteredSessions;
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _buildSummaryCard(
+                label: 'Sesiones totales',
+                value: '${_allSessions.length}',
+                icon: Icons.history_rounded,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildSummaryCard(
+                label: 'Esta semana',
+                value: '$_sessionsThisWeek',
+                icon: Icons.calendar_today_rounded,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildSummaryCard(
+                label: 'Volumen histórico',
+                value: '${_formatVolume(_totalHistoryVolume)} kg',
+                icon: Icons.bar_chart_rounded,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildSummaryCard(
+                label: 'Resultados visibles',
+                value: '${filteredSessions.length}',
+                icon: Icons.filter_alt_rounded,
+                hint: _hasActiveFilters
+                    ? '${_formatVolume(_filteredVolume)} kg con los filtros actuales'
+                    : 'Sin filtros activos',
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActiveFiltersBar() {
+    if (!_hasActiveFilters) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Filtros activos',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (_searchController.text.trim().isNotEmpty)
+                _buildMetricPill(
+                  'Búsqueda: ${_searchController.text.trim()}',
+                  Icons.search_rounded,
+                ),
+              if (_selectedTag != null)
+                _buildMetricPill(
+                  _displayTag(_selectedTag!),
+                  Icons.sell_outlined,
+                ),
+              if (_selectedDateFilter != _HistoryDateFilter.all)
+                _buildMetricPill(
+                  _dateFilterLabel(_selectedDateFilter),
+                  Icons.date_range_rounded,
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              onPressed: _clearFilters,
+              icon: const Icon(Icons.restart_alt_rounded),
+              label: const Text('Limpiar filtros'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildFilterSection() {
     final availableTags = _availableTagsFromSessions(_allSessions);
-
     if (_allSessions.isEmpty) return const SizedBox.shrink();
 
     return Container(
@@ -318,12 +547,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const Text(
+            'Buscar y filtrar',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 12),
           TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              hintText: 'Buscar por nombre o etiqueta',
+              hintText: 'Buscar por nombre, ejercicio o etiqueta',
               prefixIcon: const Icon(Icons.search),
-              suffixIcon: _searchController.text.isEmpty
+              suffixIcon: _searchController.text.trim().isEmpty
                   ? null
                   : IconButton(
                       onPressed: () {
@@ -336,7 +570,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           ),
           const SizedBox(height: 14),
           const Text(
-            'Filtrar por grupo principal',
+            'Grupo muscular',
             style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 10),
@@ -368,7 +602,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           ),
           const SizedBox(height: 14),
           const Text(
-            'Filtrar por fecha',
+            'Fecha',
             style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 10),
@@ -392,30 +626,41 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
+  String _sessionExercisePreview(WorkoutSession session) {
+    final names = session.exercises
+        .map((exercise) => exercise.exerciseName as String)
+        .where((name) => name.trim().isNotEmpty)
+        .toList();
+
+    if (names.isEmpty) {
+      return 'Sin ejercicios detallados';
+    }
+
+    if (names.length <= 3) {
+      return names.join(' • ');
+    }
+
+    final preview = names.take(3).join(' • ');
+    final remaining = names.length - 3;
+    return '$preview • +$remaining más';
+  }
+
   Widget _buildSessionCard(WorkoutSession session) {
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
-        onTap: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => WorkoutDetailScreen(session: session),
-            ),
-          );
-
-          await _refresh();
-        },
+        onTap: () => _openSessionDetail(session),
         child: Padding(
           padding: const EdgeInsets.all(18),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    width: 52,
-                    height: 52,
+                    width: 54,
+                    height: 54,
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(16),
@@ -436,17 +681,38 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${_formatDate(session.startedAt)} • ${_formatTime(session.startedAt)}',
+                          '${_formatRelativeDate(session.startedAt)} • ${_formatTime(session.startedAt)}',
                           style: TextStyle(
                             fontSize: 13,
-                            color: Colors.white.withValues(alpha: 0.70),
+                            color: Colors.white.withValues(alpha: 0.72),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _formatDate(session.startedAt),
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: Colors.white.withValues(alpha: 0.52),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const Icon(Icons.chevron_right_rounded, size: 28),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 28,
+                    color: Colors.white.withValues(alpha: 0.58),
+                  ),
                 ],
+              ),
+              const SizedBox(height: 14),
+              Text(
+                _sessionExercisePreview(session),
+                style: TextStyle(
+                  fontSize: 13.5,
+                  height: 1.4,
+                  color: Colors.white.withValues(alpha: 0.76),
+                ),
               ),
               const SizedBox(height: 14),
               Wrap(
@@ -476,7 +742,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: session.sessionTags.map(_buildTagChip).toList(),
+                  children: session.sessionTags
+                      .cast<String>()
+                      .map(_buildTagChip)
+                      .toList(),
                 ),
               ],
             ],
@@ -515,7 +784,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Cuando guardes tu primer entrenamiento aparecerá aquí con sus ejercicios, series y volumen total.',
+                    'Cuando guardes tu primer entrenamiento aparecerá aquí con sus ejercicios, series, duración y volumen total.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       height: 1.45,
@@ -535,8 +804,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        _buildOverviewSection(),
+        const SizedBox(height: 16),
         _buildFilterSection(),
         const SizedBox(height: 16),
+        _buildActiveFiltersBar(),
+        if (_hasActiveFilters) const SizedBox(height: 16),
         Card(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -588,7 +861,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             icon: const Icon(Icons.refresh_rounded),
           ),
           IconButton(
-            onPressed: _clearAllHistory,
+            onPressed: _allSessions.isEmpty ? null : _clearAllHistory,
             tooltip: 'Borrar historial',
             icon: const Icon(Icons.delete_sweep_rounded),
           ),
@@ -605,8 +878,24 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   : ListView(
                       padding: const EdgeInsets.all(16),
                       children: [
+                        _buildOverviewSection(),
+                        const SizedBox(height: 16),
                         _buildFilterSection(),
                         const SizedBox(height: 16),
+                        _buildActiveFiltersBar(),
+                        if (_hasActiveFilters) const SizedBox(height: 16),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Text(
+                            _hasActiveFilters
+                                ? 'Mostrando ${filteredSessions.length} de ${_allSessions.length} sesiones'
+                                : 'Tus entrenamientos guardados',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
                         ...List.generate(filteredSessions.length, (index) {
                           return Padding(
                             padding: EdgeInsets.only(

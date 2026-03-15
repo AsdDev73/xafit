@@ -8,13 +8,6 @@ import '../services/workout_draft_service.dart'
 import 'workout_detail_screen.dart';
 import 'workout_screen.dart' show WorkoutScreen;
 
-/// Pantalla principal de Inicio.
-///
-/// Objetivos de esta versión:
-/// - Mantener el flujo actual de XaFit sin romper navegación ni datos.
-/// - Hacer la Home más útil visualmente para UX/portfolio.
-/// - Reaprovechar únicamente datos que ya expone DashboardService.
-/// - Mantener el banner de entrenamiento en curso basado en WorkoutDraftService.
 class HomeScreen extends StatefulWidget {
   final int refreshToken;
 
@@ -25,10 +18,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  /// Servicio principal del dashboard.
   final DashboardService _dashboardService = AppRepositories.dashboardService;
-
-  /// Servicio para detectar si hay un entreno en curso guardado en borrador.
   final WorkoutDraftService _workoutDraftService = const WorkoutDraftService();
 
   bool _isLoading = true;
@@ -49,9 +39,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  /// Refresco completo de Inicio:
-  /// - dashboard
-  /// - borrador de entreno en curso
   Future<void> _refreshHome() async {
     setState(() {
       _isLoading = true;
@@ -70,7 +57,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _openAndRefresh(Widget screen) async {
-    await Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+    final navigator = Navigator.of(context);
+
+    await navigator.push(MaterialPageRoute(builder: (_) => screen));
 
     if (!mounted) return;
     await _refreshHome();
@@ -80,8 +69,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final session = _dashboard.lastSession;
     if (session == null) return;
 
-    await Navigator.push(
-      context,
+    final navigator = Navigator.of(context);
+
+    await navigator.push(
       MaterialPageRoute(builder: (_) => WorkoutDetailScreen(session: session)),
     );
 
@@ -182,8 +172,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final draft = _activeDraft;
     if (draft == null) return;
 
-    await Navigator.push(
-      context,
+    final navigator = Navigator.of(context);
+
+    await navigator.push(
       MaterialPageRoute(
         builder: (_) => WorkoutScreen(
           title: draft.title,
@@ -237,7 +228,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _showMessage('Borrador descartado');
   }
 
-  /// Tarjeta simple reutilizable para métricas rápidas.
   Widget _buildMetricCard({
     required String label,
     required String value,
@@ -403,7 +393,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Banner que aparece cuando hay un entreno en curso recuperable.
   Widget _buildDraftBanner(WorkoutDraft draft) {
     final exerciseCount = draft.exercises.length;
     final setCount = _draftSetCount(draft);
@@ -490,7 +479,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Resumen corto y visual de las métricas principales de la semana.
   Widget _buildTopMetrics() {
     final currentWeight = _dashboard.currentWeight;
     final weeklyVolumeText = _dashboard.weeklyVolume > 0
@@ -545,6 +533,47 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickInsightStrip() {
+    final latestEntry = _dashboard.latestProgressEntry;
+    final lastSession = _dashboard.lastSession;
+
+    String leftTitle = 'Sin registro corporal';
+    String leftValue = 'Añade uno en Progreso';
+    if (latestEntry != null) {
+      leftTitle = 'Último peso';
+      leftValue =
+          '${_formatWeight(latestEntry.weight)} • ${_formatDate(latestEntry.date)}';
+    }
+
+    String rightTitle = 'Sin último entreno';
+    String rightValue = 'Crea una sesión';
+    if (lastSession != null) {
+      rightTitle = 'Última sesión';
+      rightValue =
+          '${lastSession.totalSets} series • ${_formatDaysSince(lastSession.startedAt)}';
+    }
+
+    return Row(
+      children: [
+        Expanded(
+          child: _buildMetricCard(
+            label: leftTitle,
+            value: leftValue,
+            icon: Icons.show_chart_rounded,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildMetricCard(
+            label: rightTitle,
+            value: rightValue,
+            icon: Icons.bolt_rounded,
+          ),
         ),
       ],
     );
@@ -712,13 +741,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Icon(_goalIcon(profile.goal)),
               ),
               const SizedBox(width: 12),
-              Expanded(
+              const Expanded(
                 child: Text(
                   'Objetivo actual',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
                 ),
               ),
             ],
@@ -765,9 +791,9 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'Último entrenamiento',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 12),
             Text(
@@ -810,13 +836,10 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Row(
               children: [
-                Expanded(
+                const Expanded(
                   child: Text(
                     'Último entrenamiento',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
                   ),
                 ),
                 Icon(
@@ -855,10 +878,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildRecentActivitySection() {
-    final activities = _dashboard.recentActivities
-        .whereType<DashboardActivityItem>()
-        .toList();
+  Widget _buildRecentPrsCard() {
+    final prs = _dashboard.recentPrs;
 
     return Container(
       width: double.infinity,
@@ -871,9 +892,112 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const Text(
+            'Mejores marcas recientes',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
           Text(
+            prs.isEmpty
+                ? 'Cuando superes tus marcas en un ejercicio aparecerán aquí.'
+                : 'Tus últimos PRs detectados a partir de las sesiones guardadas.',
+            style: TextStyle(
+              fontSize: 13.5,
+              height: 1.4,
+              color: Colors.white.withValues(alpha: 0.72),
+            ),
+          ),
+          if (prs.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            ...List.generate(prs.length, (index) {
+              final pr = prs[index];
+              final isLast = index == prs.length - 1;
+
+              return Padding(
+                padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.05),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Icon(
+                          Icons.emoji_events_outlined,
+                          color: Colors.amber,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              pr.exerciseName,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'PR de ${_formatWeight(pr.weight)} × ${pr.reps} reps',
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                color: Colors.white.withValues(alpha: 0.78),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              '${_formatLongDate(pr.occurredAt)} • ${_formatTime(pr.occurredAt)}',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                color: Colors.white.withValues(alpha: 0.58),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecentActivitySection() {
+    final activities = _dashboard.recentActivities;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1F2B),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
             'Actividad reciente',
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 14),
           if (activities.isEmpty)
@@ -896,47 +1020,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ],
       ),
-    );
-  }
-
-  Widget _buildQuickInsightStrip() {
-    final latestEntry = _dashboard.latestProgressEntry;
-    final lastSession = _dashboard.lastSession;
-
-    String leftTitle = 'Sin registro corporal';
-    String leftValue = 'Añade uno en Progreso';
-    if (latestEntry != null) {
-      leftTitle = 'Último peso';
-      leftValue =
-          '${_formatWeight(latestEntry.weight)} • ${_formatDate(latestEntry.date)}';
-    }
-
-    String rightTitle = 'Sin último entreno';
-    String rightValue = 'Crea una sesión';
-    if (lastSession != null) {
-      rightTitle = 'Última sesión';
-      rightValue =
-          '${lastSession.totalSets} series • ${_formatDaysSince(lastSession.startedAt)}';
-    }
-
-    return Row(
-      children: [
-        Expanded(
-          child: _buildMetricCard(
-            label: leftTitle,
-            value: leftValue,
-            icon: Icons.show_chart_rounded,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildMetricCard(
-            label: rightTitle,
-            value: rightValue,
-            icon: Icons.bolt_rounded,
-          ),
-        ),
-      ],
     );
   }
 
@@ -963,6 +1046,10 @@ class _HomeScreenState extends State<HomeScreen> {
           _buildSectionTitle('Enfoque de la semana'),
           const SizedBox(height: 12),
           _buildWeeklyFocusCard(),
+          const SizedBox(height: 20),
+          _buildSectionTitle('Mejores marcas'),
+          const SizedBox(height: 12),
+          _buildRecentPrsCard(),
           const SizedBox(height: 20),
           _buildSectionTitle('Objetivo actual'),
           const SizedBox(height: 12),
@@ -994,7 +1081,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-/// Tile de actividad simple para mantener la lista limpia y visual.
 class _ActivityTile extends StatelessWidget {
   final DashboardActivityItem item;
 
