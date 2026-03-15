@@ -7,6 +7,7 @@ import '../models/workout_session.dart';
 import '../repositories/custom_exercise_repository.dart';
 import '../repositories/workout_repository.dart';
 import '../services/app_repositories.dart';
+import '../services/favorite_exercises_service.dart';
 
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -1564,34 +1565,107 @@ class _ExercisePickerSheet extends StatefulWidget {
 
 class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
   final TextEditingController _searchController = TextEditingController();
+  final FavoriteExercisesService _favoriteExercisesService =
+      const FavoriteExercisesService();
+
   String _query = '';
   String? _selectedMuscleGroup;
+  bool _showFavoritesOnly = false;
+  bool _isLoadingFavorites = true;
+  Set<String> _favoriteIds = <String>{};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFavorites();
+  }
+
+  List<Exercise> get _availableExercisesExcludingSelected {
+    return widget.exercises.where((exercise) {
+      return !widget.alreadySelectedIds.contains(exercise.id);
+    }).toList();
+  }
 
   List<String> get _muscleGroups {
-    final groups = widget.exercises.map((e) => e.muscleGroup).toSet().toList()
-      ..sort();
+    final groups =
+        _availableExercisesExcludingSelected
+            .map((e) => e.muscleGroup)
+            .toSet()
+            .toList()
+          ..sort();
     return groups;
+  }
+
+  int get _favoriteCountInScope {
+    return _availableExercisesExcludingSelected
+        .where((exercise) => _favoriteIds.contains(exercise.id))
+        .length;
+  }
+
+  Future<void> _loadFavorites() async {
+    final favoriteIds = await _favoriteExercisesService.getFavoriteIds();
+
+    if (!mounted) return;
+
+    setState(() {
+      _favoriteIds = favoriteIds;
+      _isLoadingFavorites = false;
+    });
+  }
+
+  Future<void> _toggleFavorite(Exercise exercise) async {
+    final isNowFavorite = await _favoriteExercisesService.toggleFavorite(
+      exercise.id,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      if (isNowFavorite) {
+        _favoriteIds.add(exercise.id);
+      } else {
+        _favoriteIds.remove(exercise.id);
+      }
+    });
+  }
+
+  int _compareExercises(Exercise a, Exercise b) {
+    final aIsFavorite = _favoriteIds.contains(a.id);
+    final bIsFavorite = _favoriteIds.contains(b.id);
+
+    if (aIsFavorite != bIsFavorite) {
+      return aIsFavorite ? -1 : 1;
+    }
+
+    if (a.isCustom != b.isCustom) {
+      return a.isCustom ? -1 : 1;
+    }
+
+    return a.name.toLowerCase().compareTo(b.name.toLowerCase());
   }
 
   List<Exercise> get _filteredExercises {
     final query = _query.trim().toLowerCase();
 
-    return widget.exercises.where((exercise) {
-      if (widget.alreadySelectedIds.contains(exercise.id)) {
-        return false;
-      }
-
+    final filtered = _availableExercisesExcludingSelected.where((exercise) {
       final matchesQuery =
           query.isEmpty ||
           exercise.name.toLowerCase().contains(query) ||
+          exercise.muscleGroup.toLowerCase().contains(query) ||
           exercise.tags.any((tag) => tag.toLowerCase().contains(query));
 
       final matchesGroup =
           _selectedMuscleGroup == null ||
           exercise.muscleGroup == _selectedMuscleGroup;
 
-      return matchesQuery && matchesGroup;
+      final matchesFavorites =
+          !_showFavoritesOnly || _favoriteIds.contains(exercise.id);
+
+      return matchesQuery && matchesGroup && matchesFavorites;
     }).toList();
+
+    filtered.sort(_compareExercises);
+    return filtered;
   }
 
   @override
@@ -1633,7 +1707,7 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
             ),
             const SizedBox(height: 6),
             Text(
-              'Busca por nombre, tag o grupo muscular',
+              'Favoritos primero para encontrarlos más rápido al entrenar',
               style: TextStyle(color: Colors.white.withValues(alpha: 0.72)),
             ),
             const SizedBox(height: 16),
@@ -1645,7 +1719,7 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
                 });
               },
               decoration: const InputDecoration(
-                hintText: 'Ejemplo: press, espalda, compuesto...',
+                hintText: 'Ejemplo: press, espalda, unilateral...',
                 prefixIcon: Icon(Icons.search),
               ),
             ),
@@ -1658,11 +1732,25 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: FilterChip(
-                      selected: _selectedMuscleGroup == null,
+                      selected:
+                          !_showFavoritesOnly && _selectedMuscleGroup == null,
                       label: const Text('Todos'),
                       onSelected: (_) {
                         setState(() {
+                          _showFavoritesOnly = false;
                           _selectedMuscleGroup = null;
+                        });
+                      },
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: FilterChip(
+                      selected: _showFavoritesOnly,
+                      label: Text('Favoritos ($_favoriteCountInScope)'),
+                      onSelected: (_) {
+                        setState(() {
+                          _showFavoritesOnly = true;
                         });
                       },
                     ),
@@ -1678,6 +1766,7 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
                         onSelected: (_) {
                           setState(() {
                             _selectedMuscleGroup = selected ? null : group;
+                            _showFavoritesOnly = false;
                           });
                         },
                       ),
@@ -1687,18 +1776,25 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
               ),
             ),
             const SizedBox(height: 14),
-            Text(
-              '${exercises.length} ejercicios disponibles',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.72)),
-            ),
+            if (_isLoadingFavorites)
+              const LinearProgressIndicator()
+            else
+              Text(
+                '${exercises.length} ejercicios disponibles',
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.72)),
+              ),
             const SizedBox(height: 10),
             Flexible(
-              child: exercises.isEmpty
+              child: _isLoadingFavorites
+                  ? const Center(child: CircularProgressIndicator())
+                  : exercises.isEmpty
                   ? Center(
                       child: Padding(
                         padding: const EdgeInsets.all(24),
                         child: Text(
-                          'No hay ejercicios que coincidan con tu búsqueda',
+                          _showFavoritesOnly
+                              ? 'No tienes favoritos disponibles con ese filtro'
+                              : 'No hay ejercicios que coincidan con tu búsqueda',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.72),
@@ -1712,6 +1808,7 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
                       separatorBuilder: (_, __) => const SizedBox(height: 10),
                       itemBuilder: (context, index) {
                         final exercise = exercises[index];
+                        final isFavorite = _favoriteIds.contains(exercise.id);
 
                         return Material(
                           color: Colors.white.withValues(alpha: 0.03),
@@ -1742,14 +1839,35 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        Text(
-                                          exercise.name,
-                                          style: const TextStyle(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w700,
-                                          ),
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                exercise.name,
+                                                style: const TextStyle(
+                                                  fontSize: 15,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                            ),
+                                            IconButton(
+                                              tooltip: isFavorite
+                                                  ? 'Quitar de favoritos'
+                                                  : 'Añadir a favoritos',
+                                              onPressed: () =>
+                                                  _toggleFavorite(exercise),
+                                              icon: Icon(
+                                                isFavorite
+                                                    ? Icons.star_rounded
+                                                    : Icons.star_border_rounded,
+                                                color: isFavorite
+                                                    ? Colors.amber
+                                                    : Colors.white70,
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                        const SizedBox(height: 4),
+                                        const SizedBox(height: 2),
                                         Text(
                                           exercise.muscleGroup,
                                           style: TextStyle(
@@ -1763,6 +1881,11 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
                                           spacing: 6,
                                           runSpacing: 6,
                                           children: [
+                                            if (isFavorite)
+                                              const _MiniTagChip(
+                                                icon: Icons.star_rounded,
+                                                label: 'Favorito',
+                                              ),
                                             ...exercise.tags
                                                 .take(3)
                                                 .map(

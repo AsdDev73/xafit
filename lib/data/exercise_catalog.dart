@@ -2,7 +2,9 @@ import '../models/exercise.dart';
 
 class ExerciseCatalog {
   static final List<Exercise> allExercises = [
+    // =========================
     // PECHO
+    // =========================
     const Exercise(
       id: 'chest_1',
       name: 'Press banca con barra',
@@ -63,8 +65,82 @@ class ExerciseCatalog {
       muscleGroup: 'Pecho',
       tags: ['compuesto', 'peso corporal', 'empuje', 'pecho inferior'],
     ),
+    const Exercise(
+      id: 'chest_11',
+      name: 'Press plano con mancuernas',
+      muscleGroup: 'Pecho',
+      tags: ['compuesto', 'mancuernas', 'empuje', 'pecho medio'],
+    ),
+    const Exercise(
+      id: 'chest_12',
+      name: 'Press declinado con mancuernas',
+      muscleGroup: 'Pecho',
+      tags: ['compuesto', 'mancuernas', 'declinado', 'pecho inferior'],
+    ),
+    const Exercise(
+      id: 'chest_13',
+      name: 'Press convergente en máquina',
+      muscleGroup: 'Pecho',
+      tags: ['compuesto', 'maquina', 'empuje', 'convergente'],
+    ),
+    const Exercise(
+      id: 'chest_14',
+      name: 'Press unilateral en máquina',
+      muscleGroup: 'Pecho',
+      tags: ['compuesto', 'maquina', 'unilateral', 'pecho'],
+    ),
+    const Exercise(
+      id: 'chest_15',
+      name: 'Cruce en polea alta',
+      muscleGroup: 'Pecho',
+      tags: ['aislado', 'polea', 'pecho inferior', 'tension constante'],
+    ),
+    const Exercise(
+      id: 'chest_16',
+      name: 'Cruce en polea baja',
+      muscleGroup: 'Pecho',
+      tags: ['aislado', 'polea', 'pecho superior', 'tension constante'],
+    ),
+    const Exercise(
+      id: 'chest_17',
+      name: 'Cruce en polea unilateral',
+      muscleGroup: 'Pecho',
+      tags: ['aislado', 'polea', 'unilateral', 'tension constante'],
+    ),
+    const Exercise(
+      id: 'chest_18',
+      name: 'Press inclinado en Smith',
+      muscleGroup: 'Pecho',
+      tags: ['compuesto', 'smith', 'inclinado', 'guiado'],
+    ),
+    const Exercise(
+      id: 'chest_19',
+      name: 'Flexiones',
+      muscleGroup: 'Pecho',
+      tags: ['compuesto', 'peso corporal', 'empuje', 'basico'],
+    ),
+    const Exercise(
+      id: 'chest_20',
+      name: 'Flexiones lastradas',
+      muscleGroup: 'Pecho',
+      tags: ['compuesto', 'peso corporal', 'lastre', 'empuje'],
+    ),
+    const Exercise(
+      id: 'chest_21',
+      name: 'Press en máquina inclinada',
+      muscleGroup: 'Pecho',
+      tags: ['compuesto', 'maquina', 'inclinado', 'guiado'],
+    ),
+    const Exercise(
+      id: 'chest_22',
+      name: 'Svend press',
+      muscleGroup: 'Pecho',
+      tags: ['aislado', 'disco', 'contraccion', 'pecho'],
+    ),
 
+    // =========================
     // ESPALDA
+    // =========================
     const Exercise(
       id: 'back_1',
       name: 'Dominadas pronas',
@@ -125,8 +201,82 @@ class ExerciseCatalog {
       muscleGroup: 'Espalda',
       tags: ['compuesto', 'barra', 'cadena posterior', 'fuerza'],
     ),
+    const Exercise(
+      id: 'back_11',
+      name: 'Dominadas neutras',
+      muscleGroup: 'Espalda',
+      tags: ['compuesto', 'peso corporal', 'tiron vertical', 'dorsal'],
+    ),
+    const Exercise(
+      id: 'back_12',
+      name: 'Jalón neutro',
+      muscleGroup: 'Espalda',
+      tags: ['polea', 'tiron vertical', 'dorsal', 'neutro'],
+    ),
+    const Exercise(
+      id: 'back_13',
+      name: 'Jalón unilateral',
+      muscleGroup: 'Espalda',
+      tags: ['polea', 'tiron vertical', 'unilateral', 'dorsal'],
+    ),
+    const Exercise(
+      id: 'back_14',
+      name: 'Remo unilateral en polea',
+      muscleGroup: 'Espalda',
+      tags: ['polea', 'tiron horizontal', 'unilateral', 'espesor'],
+    ),
+    const Exercise(
+      id: 'back_15',
+      name: 'Remo con pecho apoyado',
+      muscleGroup: 'Espalda',
+      tags: ['maquina', 'tiron horizontal', 'espesor', 'estable'],
+    ),
+    const Exercise(
+      id: 'back_16',
+      name: 'Remo en T',
+      muscleGroup: 'Espalda',
+      tags: ['compuesto', 'maquina', 'tiron horizontal', 'espesor'],
+    ),
+    const Exercise(
+      id: 'back_17',
+      name: 'Remo Meadows',
+      muscleGroup: 'Espalda',
+      tags: ['barra', 'unilateral', 'tiron horizontal', 'espesor'],
+    ),
+    const Exercise(
+      id: 'back_18',
+      name: 'Rack pull',
+      muscleGroup: 'Espalda',
+      tags: ['compuesto', 'barra', 'cadena posterior', 'fuerza'],
+    ),
+    const Exercise(
+      id: 'back_19',
+      name: 'Pulldown con brazos rectos',
+      muscleGroup: 'Espalda',
+      tags: ['polea', 'aislado', 'dorsal', 'estiramiento'],
+    ),
+    const Exercise(
+      id: 'back_20',
+      name: 'Remo invertido',
+      muscleGroup: 'Espalda',
+      tags: ['peso corporal', 'tiron horizontal', 'basico', 'espalda'],
+    ),
+    const Exercise(
+      id: 'back_21',
+      name: 'Pullover con mancuerna',
+      muscleGroup: 'Espalda',
+      tags: ['mancuernas', 'aislado', 'dorsal', 'estiramiento'],
+    ),
+    const Exercise(
+      id: 'back_22',
+      name: 'Remo en máquina convergente',
+      muscleGroup: 'Espalda',
+      tags: ['maquina', 'tiron horizontal', 'convergente', 'espesor'],
+    ),
 
+    // =========================
     // PIERNA
+    // =========================
     const Exercise(
       id: 'leg_1',
       name: 'Sentadilla con barra',
@@ -199,8 +349,118 @@ class ExerciseCatalog {
       muscleGroup: 'Pierna',
       tags: ['aislado', 'gemelo', 'maquina', 'sentado'],
     ),
+    const Exercise(
+      id: 'leg_13',
+      name: 'Sentadilla frontal',
+      muscleGroup: 'Pierna',
+      tags: ['compuesto', 'barra', 'cuadriceps', 'core'],
+    ),
+    const Exercise(
+      id: 'leg_14',
+      name: 'Hack squat',
+      muscleGroup: 'Pierna',
+      tags: ['compuesto', 'maquina', 'cuadriceps', 'guiado'],
+    ),
+    const Exercise(
+      id: 'leg_15',
+      name: 'Prensa unilateral',
+      muscleGroup: 'Pierna',
+      tags: ['compuesto', 'maquina', 'unilateral', 'cuadriceps'],
+    ),
+    const Exercise(
+      id: 'leg_16',
+      name: 'Extensión de cuadriceps unilateral',
+      muscleGroup: 'Pierna',
+      tags: ['aislado', 'maquina', 'unilateral', 'cuadriceps'],
+    ),
+    const Exercise(
+      id: 'leg_17',
+      name: 'Curl femoral unilateral',
+      muscleGroup: 'Pierna',
+      tags: ['aislado', 'maquina', 'unilateral', 'femoral'],
+    ),
+    const Exercise(
+      id: 'leg_18',
+      name: 'Peso muerto rumano con mancuernas',
+      muscleGroup: 'Pierna',
+      tags: ['compuesto', 'mancuernas', 'femoral', 'gluteo'],
+    ),
+    const Exercise(
+      id: 'leg_19',
+      name: 'Peso muerto rumano a una pierna',
+      muscleGroup: 'Pierna',
+      tags: ['compuesto', 'mancuernas', 'unilateral', 'gluteo'],
+    ),
+    const Exercise(
+      id: 'leg_20',
+      name: 'B-stance RDL',
+      muscleGroup: 'Pierna',
+      tags: ['compuesto', 'barra', 'unilateral', 'femoral'],
+    ),
+    const Exercise(
+      id: 'leg_21',
+      name: 'Step-up',
+      muscleGroup: 'Pierna',
+      tags: ['compuesto', 'mancuernas', 'unilateral', 'gluteo'],
+    ),
+    const Exercise(
+      id: 'leg_22',
+      name: 'Zancada caminando',
+      muscleGroup: 'Pierna',
+      tags: ['compuesto', 'mancuernas', 'unilateral', 'cuadriceps'],
+    ),
+    const Exercise(
+      id: 'leg_23',
+      name: 'Sentadilla goblet',
+      muscleGroup: 'Pierna',
+      tags: ['compuesto', 'mancuernas', 'cuadriceps', 'basico'],
+    ),
+    const Exercise(
+      id: 'leg_24',
+      name: 'Hip thrust unilateral',
+      muscleGroup: 'Pierna',
+      tags: ['compuesto', 'unilateral', 'gluteo', 'peso corporal'],
+    ),
+    const Exercise(
+      id: 'leg_25',
+      name: 'Patada de glúteo en polea',
+      muscleGroup: 'Pierna',
+      tags: ['aislado', 'polea', 'gluteo', 'unilateral'],
+    ),
+    const Exercise(
+      id: 'leg_26',
+      name: 'Abductores en máquina',
+      muscleGroup: 'Pierna',
+      tags: ['aislado', 'maquina', 'gluteo', 'abduccion'],
+    ),
+    const Exercise(
+      id: 'leg_27',
+      name: 'Aductores en máquina',
+      muscleGroup: 'Pierna',
+      tags: ['aislado', 'maquina', 'aductores', 'guiado'],
+    ),
+    const Exercise(
+      id: 'leg_28',
+      name: 'Buenos días',
+      muscleGroup: 'Pierna',
+      tags: ['compuesto', 'barra', 'cadena posterior', 'femoral'],
+    ),
+    const Exercise(
+      id: 'leg_29',
+      name: 'Puente de glúteo',
+      muscleGroup: 'Pierna',
+      tags: ['compuesto', 'peso corporal', 'gluteo', 'basico'],
+    ),
+    const Exercise(
+      id: 'leg_30',
+      name: 'Sissy squat',
+      muscleGroup: 'Pierna',
+      tags: ['aislado', 'peso corporal', 'cuadriceps', 'avanzado'],
+    ),
 
+    // =========================
     // HOMBRO
+    // =========================
     const Exercise(
       id: 'shoulder_1',
       name: 'Press militar con barra',
@@ -239,13 +499,13 @@ class ExerciseCatalog {
     ),
     const Exercise(
       id: 'shoulder_7',
-      name: 'Pajaros con mancuernas',
+      name: 'Pájaros con mancuernas',
       muscleGroup: 'Hombro',
       tags: ['aislado', 'mancuernas', 'deltoide posterior'],
     ),
     const Exercise(
       id: 'shoulder_8',
-      name: 'Pajaros en peck deck',
+      name: 'Pájaros en peck deck',
       muscleGroup: 'Hombro',
       tags: ['aislado', 'maquina', 'deltoide posterior'],
     ),
@@ -255,8 +515,64 @@ class ExerciseCatalog {
       muscleGroup: 'Hombro',
       tags: ['polea', 'deltoide posterior', 'trapecio', 'salud hombro'],
     ),
+    const Exercise(
+      id: 'shoulder_10',
+      name: 'Arnold press',
+      muscleGroup: 'Hombro',
+      tags: ['compuesto', 'mancuernas', 'empuje', 'deltoide frontal'],
+    ),
+    const Exercise(
+      id: 'shoulder_11',
+      name: 'Press unilateral con mancuerna',
+      muscleGroup: 'Hombro',
+      tags: ['compuesto', 'mancuernas', 'unilateral', 'core'],
+    ),
+    const Exercise(
+      id: 'shoulder_12',
+      name: 'Press en Smith',
+      muscleGroup: 'Hombro',
+      tags: ['compuesto', 'smith', 'empuje', 'guiado'],
+    ),
+    const Exercise(
+      id: 'shoulder_13',
+      name: 'Elevación lateral en máquina',
+      muscleGroup: 'Hombro',
+      tags: ['aislado', 'maquina', 'deltoide lateral', 'guiado'],
+    ),
+    const Exercise(
+      id: 'shoulder_14',
+      name: 'Elevación lateral inclinada',
+      muscleGroup: 'Hombro',
+      tags: ['aislado', 'mancuernas', 'deltoide lateral', 'estiramiento'],
+    ),
+    const Exercise(
+      id: 'shoulder_15',
+      name: 'Elevación frontal en polea',
+      muscleGroup: 'Hombro',
+      tags: ['aislado', 'polea', 'deltoide frontal', 'unilateral'],
+    ),
+    const Exercise(
+      id: 'shoulder_16',
+      name: 'Reverse fly en polea',
+      muscleGroup: 'Hombro',
+      tags: ['aislado', 'polea', 'deltoide posterior', 'tension constante'],
+    ),
+    const Exercise(
+      id: 'shoulder_17',
+      name: 'Reverse fly unilateral en polea',
+      muscleGroup: 'Hombro',
+      tags: ['aislado', 'polea', 'unilateral', 'deltoide posterior'],
+    ),
+    const Exercise(
+      id: 'shoulder_18',
+      name: 'Y-raise',
+      muscleGroup: 'Hombro',
+      tags: ['aislado', 'mancuernas', 'estabilidad', 'trapecio'],
+    ),
 
-    // BICEPS
+    // =========================
+    // BÍCEPS
+    // =========================
     const Exercise(
       id: 'biceps_1',
       name: 'Curl con barra recta',
@@ -305,13 +621,51 @@ class ExerciseCatalog {
       muscleGroup: 'Bíceps',
       tags: ['aislado', 'maquina', 'predicador', 'biceps'],
     ),
+    const Exercise(
+      id: 'biceps_9',
+      name: 'Curl concentración',
+      muscleGroup: 'Bíceps',
+      tags: ['aislado', 'mancuernas', 'unilateral', 'contraccion'],
+    ),
+    const Exercise(
+      id: 'biceps_10',
+      name: 'Spider curl',
+      muscleGroup: 'Bíceps',
+      tags: ['aislado', 'barra z', 'biceps', 'contraccion'],
+    ),
+    const Exercise(
+      id: 'biceps_11',
+      name: 'Bayesian curl',
+      muscleGroup: 'Bíceps',
+      tags: ['aislado', 'polea', 'unilateral', 'estiramiento'],
+    ),
+    const Exercise(
+      id: 'biceps_12',
+      name: 'Curl predicador unilateral en polea',
+      muscleGroup: 'Bíceps',
+      tags: ['aislado', 'polea', 'unilateral', 'predicador'],
+    ),
+    const Exercise(
+      id: 'biceps_13',
+      name: 'Curl martillo cruzado',
+      muscleGroup: 'Bíceps',
+      tags: ['aislado', 'mancuernas', 'unilateral', 'braquial'],
+    ),
+    const Exercise(
+      id: 'biceps_14',
+      name: 'Curl inverso con barra',
+      muscleGroup: 'Bíceps',
+      tags: ['aislado', 'barra', 'antebrazo', 'braquiorradial'],
+    ),
 
-    // TRICEPS
+    // =========================
+    // TRÍCEPS
+    // =========================
     const Exercise(
       id: 'triceps_1',
-      name: 'Press frances con barra Z',
+      name: 'Press francés con barra Z',
       muscleGroup: 'Tríceps',
-      tags: ['aislado', 'barra z', 'triceps', 'tumado'],
+      tags: ['aislado', 'barra z', 'triceps', 'tumbado'],
     ),
     const Exercise(
       id: 'triceps_2',
@@ -339,7 +693,7 @@ class ExerciseCatalog {
     ),
     const Exercise(
       id: 'triceps_6',
-      name: 'Fondos para triceps',
+      name: 'Fondos para tríceps',
       muscleGroup: 'Tríceps',
       tags: ['compuesto', 'peso corporal', 'empuje', 'triceps'],
     ),
@@ -349,8 +703,52 @@ class ExerciseCatalog {
       muscleGroup: 'Tríceps',
       tags: ['compuesto', 'barra', 'empuje', 'triceps'],
     ),
+    const Exercise(
+      id: 'triceps_8',
+      name: 'Pushdown unilateral',
+      muscleGroup: 'Tríceps',
+      tags: ['aislado', 'polea', 'unilateral', 'triceps'],
+    ),
+    const Exercise(
+      id: 'triceps_9',
+      name: 'Extensión unilateral por encima de la cabeza en polea',
+      muscleGroup: 'Tríceps',
+      tags: ['aislado', 'polea', 'unilateral', 'cabeza larga'],
+    ),
+    const Exercise(
+      id: 'triceps_10',
+      name: 'Kickback con mancuerna',
+      muscleGroup: 'Tríceps',
+      tags: ['aislado', 'mancuernas', 'unilateral', 'contraccion'],
+    ),
+    const Exercise(
+      id: 'triceps_11',
+      name: 'Press JM',
+      muscleGroup: 'Tríceps',
+      tags: ['compuesto', 'barra', 'triceps', 'fuerza'],
+    ),
+    const Exercise(
+      id: 'triceps_12',
+      name: 'Press francés con mancuernas',
+      muscleGroup: 'Tríceps',
+      tags: ['aislado', 'mancuernas', 'triceps', 'tumbado'],
+    ),
+    const Exercise(
+      id: 'triceps_13',
+      name: 'Pushdown invertido',
+      muscleGroup: 'Tríceps',
+      tags: ['aislado', 'polea', 'triceps', 'agarre inverso'],
+    ),
+    const Exercise(
+      id: 'triceps_14',
+      name: 'Fondos en banco',
+      muscleGroup: 'Tríceps',
+      tags: ['compuesto', 'peso corporal', 'triceps', 'basico'],
+    ),
 
+    // =========================
     // ABDOMEN
+    // =========================
     const Exercise(
       id: 'abs_1',
       name: 'Crunch en suelo',
@@ -359,7 +757,7 @@ class ExerciseCatalog {
     ),
     const Exercise(
       id: 'abs_2',
-      name: 'Crunch en maquina',
+      name: 'Crunch en máquina',
       muscleGroup: 'Abdomen',
       tags: ['aislado', 'maquina', 'core'],
     ),
@@ -398,6 +796,54 @@ class ExerciseCatalog {
       name: 'Encogimientos en polea',
       muscleGroup: 'Abdomen',
       tags: ['polea', 'core', 'resistencia'],
+    ),
+    const Exercise(
+      id: 'abs_9',
+      name: 'Pallof press',
+      muscleGroup: 'Abdomen',
+      tags: ['polea', 'core', 'anti rotacion', 'estabilidad'],
+    ),
+    const Exercise(
+      id: 'abs_10',
+      name: 'Woodchopper en polea',
+      muscleGroup: 'Abdomen',
+      tags: ['polea', 'oblicuos', 'rotacion', 'core'],
+    ),
+    const Exercise(
+      id: 'abs_11',
+      name: 'Crunch declinado',
+      muscleGroup: 'Abdomen',
+      tags: ['peso corporal', 'core', 'abdomen'],
+    ),
+    const Exercise(
+      id: 'abs_12',
+      name: 'Elevación de rodillas colgado',
+      muscleGroup: 'Abdomen',
+      tags: ['peso corporal', 'core', 'abdomen inferior'],
+    ),
+    const Exercise(
+      id: 'abs_13',
+      name: 'Hollow body hold',
+      muscleGroup: 'Abdomen',
+      tags: ['isometrico', 'core', 'estabilidad'],
+    ),
+    const Exercise(
+      id: 'abs_14',
+      name: 'Dead bug',
+      muscleGroup: 'Abdomen',
+      tags: ['core', 'estabilidad', 'peso corporal'],
+    ),
+    const Exercise(
+      id: 'abs_15',
+      name: 'Mountain climbers',
+      muscleGroup: 'Abdomen',
+      tags: ['core', 'dinamico', 'peso corporal'],
+    ),
+    const Exercise(
+      id: 'abs_16',
+      name: 'Toe touches',
+      muscleGroup: 'Abdomen',
+      tags: ['peso corporal', 'core', 'abdomen superior'],
     ),
   ];
 
