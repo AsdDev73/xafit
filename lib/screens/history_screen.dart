@@ -233,7 +233,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       final normalizedTags = sessionTags.map(_normalizeText).toList();
 
       final exerciseNames = session.exercises
-          .map((exercise) => _normalizeText(exercise.exerciseName as String))
+          .map((exercise) => _normalizeText(exercise.exerciseName))
           .toList();
 
       final matchesSearch =
@@ -628,7 +628,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   String _sessionExercisePreview(WorkoutSession session) {
     final names = session.exercises
-        .map((exercise) => exercise.exerciseName as String)
+        .map((exercise) => exercise.exerciseName)
         .where((name) => name.trim().isNotEmpty)
         .toList();
 
