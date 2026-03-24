@@ -230,7 +230,6 @@ Algunos puntos técnicos importantes que ya se han resuelto:
 - Sistema de borrador de entrenamiento saneado
 - `flutter analyze` limpio
 - Recordatorio semanal conectado y funcionando
-- Home mejorada visualmente para UX y portfolio
 
 ---
 
