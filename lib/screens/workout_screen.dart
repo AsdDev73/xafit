@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../models/exercise.dart';
@@ -8,152 +9,8 @@ import '../repositories/custom_exercise_repository.dart';
 import '../repositories/workout_repository.dart';
 import '../services/app_repositories.dart';
 import '../services/favorite_exercises_service.dart';
-
-import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
-
-class WorkoutDraft {
-  final String title;
-  final DateTime startedAt;
-  final int currentRestSeconds;
-  final bool hasStartedRestTracking;
-  final List<WorkoutDraftExercise> exercises;
-
-  const WorkoutDraft({
-    required this.title,
-    required this.startedAt,
-    required this.currentRestSeconds,
-    required this.hasStartedRestTracking,
-    required this.exercises,
-  });
-
-  Map<String, dynamic> toMap() {
-    return {
-      'title': title,
-      'startedAt': startedAt.toIso8601String(),
-      'currentRestSeconds': currentRestSeconds,
-      'hasStartedRestTracking': hasStartedRestTracking,
-      'exercises': exercises.map((e) => e.toMap()).toList(),
-    };
-  }
-
-  factory WorkoutDraft.fromMap(Map<String, dynamic> map) {
-    return WorkoutDraft(
-      title: (map['title'] ?? '').toString(),
-      startedAt: DateTime.parse(map['startedAt'] as String),
-      currentRestSeconds: (map['currentRestSeconds'] ?? 0) as int,
-      hasStartedRestTracking: (map['hasStartedRestTracking'] ?? false) as bool,
-      exercises: (map['exercises'] as List? ?? [])
-          .map(
-            (e) => WorkoutDraftExercise.fromMap(Map<String, dynamic>.from(e)),
-          )
-          .toList(),
-    );
-  }
-}
-
-class WorkoutDraftExercise {
-  final Exercise exercise;
-  final List<WorkoutDraftSet> sets;
-
-  const WorkoutDraftExercise({required this.exercise, required this.sets});
-
-  Map<String, dynamic> toMap() {
-    return {
-      'exercise': {
-        'id': exercise.id,
-        'name': exercise.name,
-        'muscleGroup': exercise.muscleGroup,
-        'tags': exercise.tags,
-        'isCustom': exercise.isCustom,
-      },
-      'sets': sets.map((s) => s.toMap()).toList(),
-    };
-  }
-
-  factory WorkoutDraftExercise.fromMap(Map<String, dynamic> map) {
-    final exerciseMap = Map<String, dynamic>.from(map['exercise']);
-
-    return WorkoutDraftExercise(
-      exercise: Exercise(
-        id: (exerciseMap['id'] ?? '').toString(),
-        name: (exerciseMap['name'] ?? '').toString(),
-        muscleGroup: (exerciseMap['muscleGroup'] ?? '').toString(),
-        tags: (exerciseMap['tags'] as List? ?? [])
-            .map((e) => e.toString())
-            .toList(),
-        isCustom: exerciseMap['isCustom'] == true,
-      ),
-      sets: (map['sets'] as List? ?? [])
-          .map((s) => WorkoutDraftSet.fromMap(Map<String, dynamic>.from(s)))
-          .toList(),
-    );
-  }
-}
-
-class WorkoutDraftSet {
-  final int setNumber;
-  final int reps;
-  final double weight;
-  final int restSeconds;
-  final DateTime createdAt;
-
-  const WorkoutDraftSet({
-    required this.setNumber,
-    required this.reps,
-    required this.weight,
-    required this.restSeconds,
-    required this.createdAt,
-  });
-
-  Map<String, dynamic> toMap() {
-    return {
-      'setNumber': setNumber,
-      'reps': reps,
-      'weight': weight,
-      'restSeconds': restSeconds,
-      'createdAt': createdAt.toIso8601String(),
-    };
-  }
-
-  factory WorkoutDraftSet.fromMap(Map<String, dynamic> map) {
-    return WorkoutDraftSet(
-      setNumber: (map['setNumber'] ?? 1) as int,
-      reps: (map['reps'] ?? 0) as int,
-      weight: ((map['weight'] ?? 0) as num).toDouble(),
-      restSeconds: (map['restSeconds'] ?? 0) as int,
-      createdAt: DateTime.parse(map['createdAt'] as String),
-    );
-  }
-}
-
-class WorkoutDraftService {
-  static const String _draftKey = 'xafit_active_workout_draft';
-
-  const WorkoutDraftService();
-
-  Future<void> saveDraft(WorkoutDraft draft) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_draftKey, jsonEncode(draft.toMap()));
-  }
-
-  Future<WorkoutDraft?> loadDraft() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_draftKey);
-
-    if (raw == null || raw.isEmpty) return null;
-
-    final decoded = jsonDecode(raw);
-    if (decoded is! Map<String, dynamic>) return null;
-
-    return WorkoutDraft.fromMap(decoded);
-  }
-
-  Future<void> clearDraft() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_draftKey);
-  }
-}
+import '../services/workout_draft_service.dart';
+import '../services/workout_live_activity_service.dart';
 
 class WorkoutScreen extends StatefulWidget {
   final String title;
@@ -179,6 +36,8 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   final CustomExerciseRepository _customExerciseRepository =
       AppRepositories.customExercises;
   final WorkoutDraftService _workoutDraftService = const WorkoutDraftService();
+  final WorkoutLiveActivityService _workoutLiveActivityService =
+      WorkoutLiveActivityService.instance;
 
   // Estado del entrenamiento actual.
   final List<_WorkoutExerciseEntry> _selectedExercises = [];
@@ -188,6 +47,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   Map<String, ExercisePerformanceSnapshot> _exerciseSnapshots = {};
 
   late DateTime _startedAt;
+  DateTime? _restStartedAt;
   Timer? _workoutTimer;
   Timer? _restTimer;
 
@@ -195,6 +55,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   int _currentRestSeconds = 0;
   bool _isSaving = false;
   bool _hasStartedRestTracking = false;
+  String? _liveActivityId;
 
   @override
   void initState() {
@@ -418,31 +279,117 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     });
   }
 
+  String _liveActivityCustomId() {
+    return 'xafit_workout_${_startedAt.microsecondsSinceEpoch}';
+  }
+
+  String _liveActivityCurrentExerciseName() {
+    if (_selectedExercises.isEmpty) {
+      return 'Sin ejercicio';
+    }
+
+    _WorkoutExerciseEntry? latestEntry;
+    DateTime? latestSetDate;
+
+    for (final entry in _selectedExercises) {
+      if (entry.sets.isEmpty) continue;
+
+      final entryLatestDate = entry.sets.last.createdAt;
+      if (latestSetDate == null || entryLatestDate.isAfter(latestSetDate)) {
+        latestSetDate = entryLatestDate;
+        latestEntry = entry;
+      }
+    }
+
+    return latestEntry?.exercise.name ?? _selectedExercises.last.exercise.name;
+  }
+
+  DateTime? _restStartedAtFromDraft(WorkoutDraft draft) {
+    if (!draft.hasStartedRestTracking) return null;
+
+    if (draft.restStartedAt != null) {
+      return draft.restStartedAt;
+    }
+
+    if (draft.currentRestSeconds <= 0) return null;
+
+    return DateTime.now().subtract(
+      Duration(seconds: draft.currentRestSeconds),
+    );
+  }
+
+  Future<String?> _syncLiveActivity() async {
+    if (kIsWeb || _selectedExercises.isEmpty) {
+      return _liveActivityId;
+    }
+
+    final payload = WorkoutLiveActivityPayload(
+      customId: _liveActivityCustomId(),
+      title: widget.title,
+      workoutStartedAt: _startedAt,
+      isResting: _hasStartedRestTracking && _restStartedAt != null,
+      restStartedAt: (_hasStartedRestTracking && _restStartedAt != null)
+          ? _restStartedAt
+          : null,
+      currentExerciseName: _liveActivityCurrentExerciseName(),
+      exercisesCount: _selectedExercises.length,
+      setsCount: _totalSets,
+    );
+
+    final updatedActivityId = await _workoutLiveActivityService.startOrUpdate(
+      payload: payload,
+      currentActivityId: _liveActivityId,
+    );
+
+    if (updatedActivityId != null && updatedActivityId.isNotEmpty) {
+      _liveActivityId = updatedActivityId;
+    }
+
+    return _liveActivityId;
+  }
+
+  Future<void> _endLiveActivity() async {
+    final activityId = _liveActivityId;
+    _liveActivityId = null;
+    await _workoutLiveActivityService.end(activityId);
+  }
+
   // Reinicia el contador de descanso cada vez que se guarda/duplica una serie.
   void _restartRestStopwatch() {
     _restTimer?.cancel();
+
+    _restStartedAt = DateTime.now();
     _currentRestSeconds = 0;
     _hasStartedRestTracking = true;
 
     _restTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
+      if (!mounted || _restStartedAt == null) return;
+
       setState(() {
-        _currentRestSeconds++;
+        _currentRestSeconds =
+            DateTime.now().difference(_restStartedAt!).inSeconds;
       });
     });
+
+    unawaited(_syncLiveActivity());
   }
 
   Future<void> _saveDraftSilently() async {
     if (_selectedExercises.isEmpty) {
       await _workoutDraftService.clearDraft();
+      await _endLiveActivity();
       return;
     }
+
+    final syncedActivityId = await _syncLiveActivity();
 
     final draft = WorkoutDraft(
       title: widget.title,
       startedAt: _startedAt,
       currentRestSeconds: _currentRestSeconds,
       hasStartedRestTracking: _hasStartedRestTracking,
+      restStartedAt: _restStartedAt,
+      liveActivityId: syncedActivityId,
       exercises: _selectedExercises.map((entry) {
         return WorkoutDraftExercise(
           exercise: entry.exercise,
@@ -467,10 +414,16 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
 
     if (!_hasStartedRestTracking) return;
 
+    _restStartedAt ??= DateTime.now().subtract(
+      Duration(seconds: _currentRestSeconds),
+    );
+
     _restTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
+      if (!mounted || _restStartedAt == null) return;
+
       setState(() {
-        _currentRestSeconds++;
+        _currentRestSeconds =
+            DateTime.now().difference(_restStartedAt!).inSeconds;
       });
     });
   }
@@ -511,15 +464,24 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     if (!mounted) return;
 
     if (!shouldRestore) {
+      _liveActivityId = draft.liveActivityId;
       await _workoutDraftService.clearDraft();
+      await _endLiveActivity();
       return;
     }
+
+    final restoredRestStartedAt = _restStartedAtFromDraft(draft);
+    final restoredRestSeconds = restoredRestStartedAt == null
+        ? draft.currentRestSeconds
+        : DateTime.now().difference(restoredRestStartedAt).inSeconds;
 
     setState(() {
       _startedAt = draft.startedAt;
       _elapsedSeconds = DateTime.now().difference(_startedAt).inSeconds;
-      _currentRestSeconds = draft.currentRestSeconds;
+      _currentRestSeconds = restoredRestSeconds < 0 ? 0 : restoredRestSeconds;
       _hasStartedRestTracking = draft.hasStartedRestTracking;
+      _restStartedAt = restoredRestStartedAt;
+      _liveActivityId = draft.liveActivityId;
 
       _selectedExercises
         ..clear()
@@ -542,6 +504,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     });
 
     _resumeRestStopwatch();
+    await _syncLiveActivity();
     _showMessage('Entrenamiento recuperado');
   }
 
@@ -578,6 +541,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
 
     if (shouldLeave) {
       await _workoutDraftService.clearDraft();
+      await _endLiveActivity();
     }
 
     return shouldLeave;
@@ -820,6 +784,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
 
       await _workoutRepository.saveSession(session);
       await _workoutDraftService.clearDraft();
+      await _endLiveActivity();
 
       if (!mounted) return;
 

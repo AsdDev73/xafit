@@ -39,6 +39,7 @@ dependencies:
   drift: ^2.32.0
   drift_flutter: ^0.3.0
   path_provider: ^2.1.5
+  live_activities: ^2.4.7
 
   file_picker: ^8.1.2
   share_plus: ^10.0.2
