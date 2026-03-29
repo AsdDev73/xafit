@@ -35,6 +35,7 @@ class WorkoutSets extends Table {
   IntColumn get reps => integer()();
   RealColumn get weight => real()();
   IntColumn get restSeconds => integer()();
+  BoolColumn get isWarmup => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime()();
 }
 
@@ -89,7 +90,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -103,6 +104,9 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 3) {
         await m.createTable(customExercises);
+      }
+      if (from < 4) {
+        await m.addColumn(workoutSets, workoutSets.isWarmup);
       }
     },
   );

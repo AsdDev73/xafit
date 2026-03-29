@@ -31,6 +31,16 @@ class WorkoutSession {
     return total;
   }
 
+  int get totalWarmupSets {
+    int total = 0;
+    for (final exercise in exercises) {
+      total += exercise.sets.where((set) => set.isWarmup).length;
+    }
+    return total;
+  }
+
+  int get totalWorkingSets => totalSets - totalWarmupSets;
+
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -81,6 +91,9 @@ class WorkoutExerciseRecord {
     required this.sets,
   });
 
+  int get warmupSetsCount => sets.where((set) => set.isWarmup).length;
+  int get workingSetsCount => sets.length - warmupSetsCount;
+
   Map<String, dynamic> toMap() {
     return {
       'exerciseId': exerciseId,
@@ -106,12 +119,18 @@ class WorkoutExerciseRecord {
   }
 }
 
+/// Registro individual de una serie.
+///
+/// [isWarmup] diferencia las series de calentamiento/aproximación de las
+/// series efectivas. Se guarda en historial, borrador y base de datos para
+/// poder usarlo luego en PRs y estadísticas.
 class WorkoutSetRecord {
   final int setNumber;
   final int reps;
   final double weight;
   final int restSeconds;
   final DateTime createdAt;
+  final bool isWarmup;
 
   const WorkoutSetRecord({
     required this.setNumber,
@@ -119,6 +138,7 @@ class WorkoutSetRecord {
     required this.weight,
     required this.restSeconds,
     required this.createdAt,
+    this.isWarmup = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -128,6 +148,7 @@ class WorkoutSetRecord {
       'weight': weight,
       'restSeconds': restSeconds,
       'createdAt': createdAt.toIso8601String(),
+      'isWarmup': isWarmup,
     };
   }
 
@@ -138,6 +159,7 @@ class WorkoutSetRecord {
       weight: (map['weight'] as num).toDouble(),
       restSeconds: map['restSeconds'],
       createdAt: DateTime.parse(map['createdAt']),
+      isWarmup: map['isWarmup'] == true,
     );
   }
 }

@@ -153,14 +153,26 @@ class WorkoutDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTag(String text) {
+  Widget _buildTag(String text, {bool highlight = false}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.06),
+        color: highlight
+            ? const Color(0xFFFFB74D).withValues(alpha: 0.16)
+            : Colors.white.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(999),
+        border: highlight
+            ? Border.all(color: const Color(0xFFFFB74D).withValues(alpha: 0.30))
+            : null,
       ),
       child: Text(text, style: const TextStyle(fontSize: 11.5)),
+    );
+  }
+
+  Widget _buildSetTypeChip(WorkoutSetRecord set) {
+    return _buildTag(
+      set.isWarmup ? 'Calentamiento' : 'Efectiva',
+      highlight: set.isWarmup,
     );
   }
 
@@ -169,32 +181,58 @@ class WorkoutDetailScreen extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: set.isWarmup
+            ? const Color(0xFFFFB74D).withValues(alpha: 0.08)
+            : Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: set.isWarmup
+              ? const Color(0xFFFFB74D).withValues(alpha: 0.25)
+              : Colors.white.withValues(alpha: 0.04),
+        ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            flex: 2,
-            child: _SetMetricCell(value: '#${set.setNumber}', label: 'Serie'),
+          Row(
+            children: [
+              _buildSetTypeChip(set),
+              const Spacer(),
+              Text(
+                'Volumen ${_formatWeight(set.weight * set.reps)} kg',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.white.withValues(alpha: 0.72),
+                ),
+              ),
+            ],
           ),
-          Expanded(
-            flex: 3,
-            child: _SetMetricCell(value: '${set.reps}', label: 'Reps'),
-          ),
-          Expanded(
-            flex: 3,
-            child: _SetMetricCell(
-              value: '${_formatWeight(set.weight)} kg',
-              label: 'Peso',
-            ),
-          ),
-          Expanded(
-            flex: 4,
-            child: _SetMetricCell(
-              value: _formatRest(set.restSeconds),
-              label: 'Descanso',
-            ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: _SetMetricCell(value: '#${set.setNumber}', label: 'Serie'),
+              ),
+              Expanded(
+                flex: 3,
+                child: _SetMetricCell(value: '${set.reps}', label: 'Reps'),
+              ),
+              Expanded(
+                flex: 3,
+                child: _SetMetricCell(
+                  value: '${_formatWeight(set.weight)} kg',
+                  label: 'Peso',
+                ),
+              ),
+              Expanded(
+                flex: 4,
+                child: _SetMetricCell(
+                  value: _formatRest(set.restSeconds),
+                  label: 'Descanso',
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -225,6 +263,12 @@ class WorkoutDetailScreen extends StatelessWidget {
               runSpacing: 8,
               children: [
                 _buildTag('${exercise.sets.length} series'),
+                _buildTag('${exercise.workingSetsCount} efectivas'),
+                if (exercise.warmupSetsCount > 0)
+                  _buildTag(
+                    '${exercise.warmupSetsCount} calentamiento',
+                    highlight: true,
+                  ),
                 _buildTag('${_formatWeight(volume)} kg'),
                 ...exercise.tags.take(4).map(_buildTag),
               ],
@@ -312,6 +356,22 @@ class WorkoutDetailScreen extends StatelessWidget {
                 Row(
                   children: [
                     _buildTopMetric(
+                      label: 'Efectivas',
+                      value: '${session.totalWorkingSets}',
+                      icon: Icons.local_fire_department_outlined,
+                    ),
+                    const SizedBox(width: 10),
+                    _buildTopMetric(
+                      label: 'Calentamiento',
+                      value: '${session.totalWarmupSets}',
+                      icon: Icons.wb_sunny_outlined,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    _buildTopMetric(
                       label: 'Duración',
                       value: _formatDuration(session.durationSeconds),
                       icon: Icons.timer_outlined,
@@ -358,14 +418,14 @@ class _SetMetricCell extends StatelessWidget {
       children: [
         Text(
           value,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: 4),
         Text(
           label,
           style: TextStyle(
-            fontSize: 11,
-            color: Colors.white.withValues(alpha: 0.62),
+            fontSize: 12,
+            color: Colors.white.withValues(alpha: 0.72),
           ),
         ),
       ],

@@ -62,6 +62,7 @@ class DriftWorkoutRepository implements WorkoutRepository {
                   weight: setRow.weight,
                   restSeconds: setRow.restSeconds,
                   createdAt: setRow.createdAt,
+                  isWarmup: setRow.isWarmup,
                 ),
               )
               .toList(),
@@ -155,6 +156,7 @@ class DriftWorkoutRepository implements WorkoutRepository {
                   reps: set.reps,
                   weight: set.weight,
                   restSeconds: set.restSeconds,
+                  isWarmup: Value(set.isWarmup),
                   createdAt: set.createdAt,
                 ),
               );
@@ -207,12 +209,15 @@ class DriftWorkoutRepository implements WorkoutRepository {
       for (final exercise in session.exercises) {
         if (exercise.sets.isEmpty) continue;
 
+        final workingSets = exercise.sets.where((set) => !set.isWarmup).toList();
+        if (workingSets.isEmpty) continue;
+
         final snapshot = snapshots.putIfAbsent(
           exercise.exerciseId,
           () => _MutableExerciseSnapshot(),
         );
 
-        for (final set in exercise.sets) {
+        for (final set in workingSets) {
           snapshot.registerSet(
             timestamp: set.createdAt,
             weight: set.weight,

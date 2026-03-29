@@ -1118,6 +1118,21 @@ class $WorkoutSetsTable extends WorkoutSets
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _isWarmupMeta = const VerificationMeta(
+    'isWarmup',
+  );
+  @override
+  late final GeneratedColumn<bool> isWarmup = GeneratedColumn<bool>(
+    'is_warmup',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_warmup" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -1137,6 +1152,7 @@ class $WorkoutSetsTable extends WorkoutSets
     reps,
     weight,
     restSeconds,
+    isWarmup,
     createdAt,
   ];
   @override
@@ -1200,6 +1216,12 @@ class $WorkoutSetsTable extends WorkoutSets
     } else if (isInserting) {
       context.missing(_restSecondsMeta);
     }
+    if (data.containsKey('is_warmup')) {
+      context.handle(
+        _isWarmupMeta,
+        isWarmup.isAcceptableOrUnknown(data['is_warmup']!, _isWarmupMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -1241,6 +1263,10 @@ class $WorkoutSetsTable extends WorkoutSets
         DriftSqlType.int,
         data['${effectivePrefix}rest_seconds'],
       )!,
+      isWarmup: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_warmup'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -1261,6 +1287,7 @@ class WorkoutSet extends DataClass implements Insertable<WorkoutSet> {
   final int reps;
   final double weight;
   final int restSeconds;
+  final bool isWarmup;
   final DateTime createdAt;
   const WorkoutSet({
     required this.id,
@@ -1269,6 +1296,7 @@ class WorkoutSet extends DataClass implements Insertable<WorkoutSet> {
     required this.reps,
     required this.weight,
     required this.restSeconds,
+    required this.isWarmup,
     required this.createdAt,
   });
   @override
@@ -1280,6 +1308,7 @@ class WorkoutSet extends DataClass implements Insertable<WorkoutSet> {
     map['reps'] = Variable<int>(reps);
     map['weight'] = Variable<double>(weight);
     map['rest_seconds'] = Variable<int>(restSeconds);
+    map['is_warmup'] = Variable<bool>(isWarmup);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -1292,6 +1321,7 @@ class WorkoutSet extends DataClass implements Insertable<WorkoutSet> {
       reps: Value(reps),
       weight: Value(weight),
       restSeconds: Value(restSeconds),
+      isWarmup: Value(isWarmup),
       createdAt: Value(createdAt),
     );
   }
@@ -1308,6 +1338,7 @@ class WorkoutSet extends DataClass implements Insertable<WorkoutSet> {
       reps: serializer.fromJson<int>(json['reps']),
       weight: serializer.fromJson<double>(json['weight']),
       restSeconds: serializer.fromJson<int>(json['restSeconds']),
+      isWarmup: serializer.fromJson<bool>(json['isWarmup']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -1321,6 +1352,7 @@ class WorkoutSet extends DataClass implements Insertable<WorkoutSet> {
       'reps': serializer.toJson<int>(reps),
       'weight': serializer.toJson<double>(weight),
       'restSeconds': serializer.toJson<int>(restSeconds),
+      'isWarmup': serializer.toJson<bool>(isWarmup),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -1332,6 +1364,7 @@ class WorkoutSet extends DataClass implements Insertable<WorkoutSet> {
     int? reps,
     double? weight,
     int? restSeconds,
+    bool? isWarmup,
     DateTime? createdAt,
   }) => WorkoutSet(
     id: id ?? this.id,
@@ -1340,6 +1373,7 @@ class WorkoutSet extends DataClass implements Insertable<WorkoutSet> {
     reps: reps ?? this.reps,
     weight: weight ?? this.weight,
     restSeconds: restSeconds ?? this.restSeconds,
+    isWarmup: isWarmup ?? this.isWarmup,
     createdAt: createdAt ?? this.createdAt,
   );
   WorkoutSet copyWithCompanion(WorkoutSetsCompanion data) {
@@ -1354,6 +1388,7 @@ class WorkoutSet extends DataClass implements Insertable<WorkoutSet> {
       restSeconds: data.restSeconds.present
           ? data.restSeconds.value
           : this.restSeconds,
+      isWarmup: data.isWarmup.present ? data.isWarmup.value : this.isWarmup,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -1367,6 +1402,7 @@ class WorkoutSet extends DataClass implements Insertable<WorkoutSet> {
           ..write('reps: $reps, ')
           ..write('weight: $weight, ')
           ..write('restSeconds: $restSeconds, ')
+          ..write('isWarmup: $isWarmup, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -1380,6 +1416,7 @@ class WorkoutSet extends DataClass implements Insertable<WorkoutSet> {
     reps,
     weight,
     restSeconds,
+    isWarmup,
     createdAt,
   );
   @override
@@ -1392,6 +1429,7 @@ class WorkoutSet extends DataClass implements Insertable<WorkoutSet> {
           other.reps == this.reps &&
           other.weight == this.weight &&
           other.restSeconds == this.restSeconds &&
+          other.isWarmup == this.isWarmup &&
           other.createdAt == this.createdAt);
 }
 
@@ -1402,6 +1440,7 @@ class WorkoutSetsCompanion extends UpdateCompanion<WorkoutSet> {
   final Value<int> reps;
   final Value<double> weight;
   final Value<int> restSeconds;
+  final Value<bool> isWarmup;
   final Value<DateTime> createdAt;
   const WorkoutSetsCompanion({
     this.id = const Value.absent(),
@@ -1410,6 +1449,7 @@ class WorkoutSetsCompanion extends UpdateCompanion<WorkoutSet> {
     this.reps = const Value.absent(),
     this.weight = const Value.absent(),
     this.restSeconds = const Value.absent(),
+    this.isWarmup = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
   WorkoutSetsCompanion.insert({
@@ -1419,6 +1459,7 @@ class WorkoutSetsCompanion extends UpdateCompanion<WorkoutSet> {
     required int reps,
     required double weight,
     required int restSeconds,
+    this.isWarmup = const Value.absent(),
     required DateTime createdAt,
   }) : workoutExerciseId = Value(workoutExerciseId),
        setNumber = Value(setNumber),
@@ -1433,6 +1474,7 @@ class WorkoutSetsCompanion extends UpdateCompanion<WorkoutSet> {
     Expression<int>? reps,
     Expression<double>? weight,
     Expression<int>? restSeconds,
+    Expression<bool>? isWarmup,
     Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
@@ -1442,6 +1484,7 @@ class WorkoutSetsCompanion extends UpdateCompanion<WorkoutSet> {
       if (reps != null) 'reps': reps,
       if (weight != null) 'weight': weight,
       if (restSeconds != null) 'rest_seconds': restSeconds,
+      if (isWarmup != null) 'is_warmup': isWarmup,
       if (createdAt != null) 'created_at': createdAt,
     });
   }
@@ -1453,6 +1496,7 @@ class WorkoutSetsCompanion extends UpdateCompanion<WorkoutSet> {
     Value<int>? reps,
     Value<double>? weight,
     Value<int>? restSeconds,
+    Value<bool>? isWarmup,
     Value<DateTime>? createdAt,
   }) {
     return WorkoutSetsCompanion(
@@ -1462,6 +1506,7 @@ class WorkoutSetsCompanion extends UpdateCompanion<WorkoutSet> {
       reps: reps ?? this.reps,
       weight: weight ?? this.weight,
       restSeconds: restSeconds ?? this.restSeconds,
+      isWarmup: isWarmup ?? this.isWarmup,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -1487,6 +1532,9 @@ class WorkoutSetsCompanion extends UpdateCompanion<WorkoutSet> {
     if (restSeconds.present) {
       map['rest_seconds'] = Variable<int>(restSeconds.value);
     }
+    if (isWarmup.present) {
+      map['is_warmup'] = Variable<bool>(isWarmup.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1502,6 +1550,7 @@ class WorkoutSetsCompanion extends UpdateCompanion<WorkoutSet> {
           ..write('reps: $reps, ')
           ..write('weight: $weight, ')
           ..write('restSeconds: $restSeconds, ')
+          ..write('isWarmup: $isWarmup, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -3350,6 +3399,7 @@ typedef $$WorkoutSetsTableCreateCompanionBuilder =
       required int reps,
       required double weight,
       required int restSeconds,
+      Value<bool> isWarmup,
       required DateTime createdAt,
     });
 typedef $$WorkoutSetsTableUpdateCompanionBuilder =
@@ -3360,6 +3410,7 @@ typedef $$WorkoutSetsTableUpdateCompanionBuilder =
       Value<int> reps,
       Value<double> weight,
       Value<int> restSeconds,
+      Value<bool> isWarmup,
       Value<DateTime> createdAt,
     });
 
@@ -3399,6 +3450,11 @@ class $$WorkoutSetsTableFilterComposer
 
   ColumnFilters<int> get restSeconds => $composableBuilder(
     column: $table.restSeconds,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isWarmup => $composableBuilder(
+    column: $table.isWarmup,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3447,6 +3503,11 @@ class $$WorkoutSetsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isWarmup => $composableBuilder(
+    column: $table.isWarmup,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -3483,6 +3544,9 @@ class $$WorkoutSetsTableAnnotationComposer
     column: $table.restSeconds,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get isWarmup =>
+      $composableBuilder(column: $table.isWarmup, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -3525,6 +3589,7 @@ class $$WorkoutSetsTableTableManager
                 Value<int> reps = const Value.absent(),
                 Value<double> weight = const Value.absent(),
                 Value<int> restSeconds = const Value.absent(),
+                Value<bool> isWarmup = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => WorkoutSetsCompanion(
                 id: id,
@@ -3533,6 +3598,7 @@ class $$WorkoutSetsTableTableManager
                 reps: reps,
                 weight: weight,
                 restSeconds: restSeconds,
+                isWarmup: isWarmup,
                 createdAt: createdAt,
               ),
           createCompanionCallback:
@@ -3543,6 +3609,7 @@ class $$WorkoutSetsTableTableManager
                 required int reps,
                 required double weight,
                 required int restSeconds,
+                Value<bool> isWarmup = const Value.absent(),
                 required DateTime createdAt,
               }) => WorkoutSetsCompanion.insert(
                 id: id,
@@ -3551,6 +3618,7 @@ class $$WorkoutSetsTableTableManager
                 reps: reps,
                 weight: weight,
                 restSeconds: restSeconds,
+                isWarmup: isWarmup,
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0

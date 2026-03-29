@@ -110,6 +110,7 @@ class WorkoutDraftSet {
   final double weight;
   final int restSeconds;
   final DateTime createdAt;
+  final bool isWarmup;
 
   const WorkoutDraftSet({
     required this.setNumber,
@@ -117,6 +118,7 @@ class WorkoutDraftSet {
     required this.weight,
     required this.restSeconds,
     required this.createdAt,
+    this.isWarmup = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -126,6 +128,7 @@ class WorkoutDraftSet {
       'weight': weight,
       'restSeconds': restSeconds,
       'createdAt': createdAt.toIso8601String(),
+      'isWarmup': isWarmup,
     };
   }
 
@@ -136,6 +139,7 @@ class WorkoutDraftSet {
       weight: ((map['weight'] ?? 0) as num).toDouble(),
       restSeconds: ((map['restSeconds'] ?? 0) as num).toInt(),
       createdAt: DateTime.parse(map['createdAt'] as String),
+      isWarmup: map['isWarmup'] == true,
     );
   }
 }

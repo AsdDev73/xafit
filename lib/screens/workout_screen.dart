@@ -247,6 +247,16 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     return total;
   }
 
+  int get _totalWarmupSets {
+    int total = 0;
+    for (final exercise in _selectedExercises) {
+      total += exercise.sets.where((set) => set.isWarmup).length;
+    }
+    return total;
+  }
+
+  int get _totalWorkingSets => _totalSets - _totalWarmupSets;
+
   double get _totalVolume {
     double total = 0;
     for (final exercise in _selectedExercises) {
@@ -262,6 +272,14 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       0,
       (total, set) => total + (set.weight * set.reps),
     );
+  }
+
+  int _exerciseWarmupCount(_WorkoutExerciseEntry entry) {
+    return entry.sets.where((set) => set.isWarmup).length;
+  }
+
+  int _exerciseWorkingCount(_WorkoutExerciseEntry entry) {
+    return entry.sets.length - _exerciseWarmupCount(entry);
   }
 
   // Snackbar segura para evitar errores al cerrar diálogos/sheets.
@@ -400,6 +418,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
               weight: set.weight,
               restSeconds: set.restSeconds,
               createdAt: set.createdAt,
+              isWarmup: set.isWarmup,
             );
           }).toList(),
         );
@@ -496,6 +515,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                   weight: draftSet.weight,
                   restSeconds: draftSet.restSeconds,
                   createdAt: draftSet.createdAt,
+                  isWarmup: draftSet.isWarmup,
                 );
               }).toList(),
             ),
@@ -632,6 +652,8 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
               : '',
           previousSetWeight: previousSet?.weight,
           previousSetReps: previousSet?.reps,
+          previousSetIsWarmup: previousSet?.isWarmup ?? false,
+          initialIsWarmup: existingSet?.isWarmup ?? false,
           lastWeight: snapshot?.lastWeight,
           lastReps: snapshot?.lastReps,
           prWeight: snapshot?.prWeight,
@@ -657,6 +679,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
           weight: result.weight,
           restSeconds: existingSet.restSeconds,
           createdAt: existingSet.createdAt,
+          isWarmup: result.isWarmup,
         );
       } else {
         entry.sets.add(
@@ -666,6 +689,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
             weight: result.weight,
             restSeconds: _hasStartedRestTracking ? _currentRestSeconds : 0,
             createdAt: DateTime.now(),
+            isWarmup: result.isWarmup,
           ),
         );
       }
@@ -705,6 +729,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
           weight: lastSet.weight,
           restSeconds: _hasStartedRestTracking ? _currentRestSeconds : 0,
           createdAt: DateTime.now(),
+          isWarmup: lastSet.isWarmup,
         ),
       );
     });
@@ -776,6 +801,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                 weight: set.weight,
                 restSeconds: set.restSeconds,
                 createdAt: set.createdAt,
+                isWarmup: set.isWarmup,
               );
             }).toList(),
           );
@@ -890,6 +916,16 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                 value: '$_totalSets',
               ),
               _SummaryChip(
+                icon: Icons.local_fire_department_outlined,
+                label: 'Efectivas',
+                value: '$_totalWorkingSets',
+              ),
+              _SummaryChip(
+                icon: Icons.wb_sunny_outlined,
+                label: 'Calent.',
+                value: '$_totalWarmupSets',
+              ),
+              _SummaryChip(
                 icon: Icons.monitor_weight_outlined,
                 label: 'Volumen',
                 value: _formatCompactVolume(_totalVolume),
@@ -974,13 +1010,21 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     _WorkoutSetEntry set,
     int index,
   ) {
+    final isWarmup = set.isWarmup;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: _panelSoftColor,
+        color: isWarmup
+            ? const Color(0xFFFFB74D).withValues(alpha: 0.08)
+            : _panelSoftColor,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(
+          color: isWarmup
+              ? const Color(0xFFFFB74D).withValues(alpha: 0.28)
+              : Colors.white.withValues(alpha: 0.05),
+        ),
       ),
       child: Row(
         children: [
@@ -988,7 +1032,9 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.07),
+              color: isWarmup
+                  ? const Color(0xFFFFB74D).withValues(alpha: 0.16)
+                  : Colors.white.withValues(alpha: 0.07),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(
@@ -1015,6 +1061,12 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                   spacing: 8,
                   runSpacing: 6,
                   children: [
+                    _MiniTagChip(
+                      icon: isWarmup
+                          ? Icons.wb_sunny_outlined
+                          : Icons.local_fire_department_outlined,
+                      label: isWarmup ? 'Calentamiento' : 'Serie efectiva',
+                    ),
                     _MiniTagChip(
                       icon: Icons.timelapse_rounded,
                       label: 'Descanso ${_formatRestLabel(set.restSeconds)}',
@@ -1104,6 +1156,15 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                             icon: Icons.layers_rounded,
                             label: '${entry.sets.length} series',
                           ),
+                          _MiniTagChip(
+                            icon: Icons.local_fire_department_outlined,
+                            label: '${_exerciseWorkingCount(entry)} efectivas',
+                          ),
+                          if (_exerciseWarmupCount(entry) > 0)
+                            _MiniTagChip(
+                              icon: Icons.wb_sunny_outlined,
+                              label: '${_exerciseWarmupCount(entry)} calent.',
+                            ),
                           _MiniTagChip(
                             icon: Icons.monitor_weight_outlined,
                             label: _formatCompactVolume(exerciseVolume),
@@ -1376,6 +1437,7 @@ class _WorkoutSetEntry {
   final double weight;
   final int restSeconds;
   final DateTime createdAt;
+  final bool isWarmup;
 
   const _WorkoutSetEntry({
     required this.setNumber,
@@ -1383,6 +1445,7 @@ class _WorkoutSetEntry {
     required this.weight,
     required this.restSeconds,
     required this.createdAt,
+    this.isWarmup = false,
   });
 
   _WorkoutSetEntry copyWith({
@@ -1391,6 +1454,7 @@ class _WorkoutSetEntry {
     double? weight,
     int? restSeconds,
     DateTime? createdAt,
+    bool? isWarmup,
   }) {
     return _WorkoutSetEntry(
       setNumber: setNumber ?? this.setNumber,
@@ -1398,6 +1462,7 @@ class _WorkoutSetEntry {
       weight: weight ?? this.weight,
       restSeconds: restSeconds ?? this.restSeconds,
       createdAt: createdAt ?? this.createdAt,
+      isWarmup: isWarmup ?? this.isWarmup,
     );
   }
 }
@@ -1892,8 +1957,13 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
 class _SetEditorResult {
   final double weight;
   final int reps;
+  final bool isWarmup;
 
-  const _SetEditorResult({required this.weight, required this.reps});
+  const _SetEditorResult({
+    required this.weight,
+    required this.reps,
+    required this.isWarmup,
+  });
 }
 
 class _SetEditorSheet extends StatefulWidget {
@@ -1904,6 +1974,8 @@ class _SetEditorSheet extends StatefulWidget {
   final String initialRepsText;
   final double? previousSetWeight;
   final int? previousSetReps;
+  final bool previousSetIsWarmup;
+  final bool initialIsWarmup;
   final double? lastWeight;
   final int? lastReps;
   final double? prWeight;
@@ -1919,6 +1991,8 @@ class _SetEditorSheet extends StatefulWidget {
     required this.initialRepsText,
     required this.previousSetWeight,
     required this.previousSetReps,
+    required this.previousSetIsWarmup,
+    required this.initialIsWarmup,
     required this.lastWeight,
     required this.lastReps,
     required this.prWeight,
@@ -1934,6 +2008,7 @@ class _SetEditorSheet extends StatefulWidget {
 class _SetEditorSheetState extends State<_SetEditorSheet> {
   late final TextEditingController _weightController;
   late final TextEditingController _repsController;
+  late bool _isWarmup;
   String? _errorText;
 
   @override
@@ -1941,6 +2016,7 @@ class _SetEditorSheetState extends State<_SetEditorSheet> {
     super.initState();
     _weightController = TextEditingController(text: widget.initialWeightText);
     _repsController = TextEditingController(text: widget.initialRepsText);
+    _isWarmup = widget.initialIsWarmup;
   }
 
   @override
@@ -1998,7 +2074,9 @@ class _SetEditorSheetState extends State<_SetEditorSheet> {
       return;
     }
 
-    Navigator.of(context).pop(_SetEditorResult(weight: weight, reps: reps));
+    Navigator.of(context).pop(
+      _SetEditorResult(weight: weight, reps: reps, isWarmup: _isWarmup),
+    );
   }
 
   @override
@@ -2060,7 +2138,7 @@ class _SetEditorSheetState extends State<_SetEditorSheet> {
                           widget.previousSetReps != null)
                         _QuickFillChip(
                           label:
-                              'Última serie ${widget.formatWeight(widget.previousSetWeight!)} × ${widget.previousSetReps}',
+                              '${widget.previousSetIsWarmup ? 'Últ. calent.' : 'Última serie'} ${widget.formatWeight(widget.previousSetWeight!)} × ${widget.previousSetReps}',
                           onTap: () {
                             _setWeight(widget.previousSetWeight!);
                             _setReps(widget.previousSetReps!);
@@ -2133,6 +2211,36 @@ class _SetEditorSheetState extends State<_SetEditorSheet> {
             ),
             const SizedBox(height: 16),
             const Text(
+              'Tipo de serie',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ChoiceChip(
+                  label: const Text('Serie efectiva'),
+                  selected: !_isWarmup,
+                  onSelected: (_) {
+                    setState(() {
+                      _isWarmup = false;
+                    });
+                  },
+                ),
+                ChoiceChip(
+                  label: const Text('Calentamiento'),
+                  selected: _isWarmup,
+                  onSelected: (_) {
+                    setState(() {
+                      _isWarmup = true;
+                    });
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Text(
               'Ajustes rápidos',
               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
             ),
@@ -2188,6 +2296,16 @@ class _SetEditorSheetState extends State<_SetEditorSheet> {
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    _isWarmup
+                        ? 'Se guardará como serie de calentamiento'
+                        : 'Se guardará como serie efectiva',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white.withValues(alpha: 0.68),
                     ),
                   ),
                 ],
