@@ -54,12 +54,15 @@ class DashboardActivityItem {
   });
 }
 
+enum DashboardPersonalRecordType { weight, reps, volume }
+
 class DashboardPersonalRecordItem {
   final String exerciseId;
   final String exerciseName;
   final double weight;
   final int reps;
   final DateTime occurredAt;
+  final DashboardPersonalRecordType type;
 
   const DashboardPersonalRecordItem({
     required this.exerciseId,
@@ -67,7 +70,10 @@ class DashboardPersonalRecordItem {
     required this.weight,
     required this.reps,
     required this.occurredAt,
+    required this.type,
   });
+
+  double get volume => weight * reps;
 }
 
 class DashboardService {
@@ -227,26 +233,44 @@ class DashboardService {
     final chronologicalSessions = List<WorkoutSession>.from(sessions)
       ..sort((a, b) => a.startedAt.compareTo(b.startedAt));
 
-    final Map<String, _ExerciseBestMark> bestByExercise = {};
+    final Map<String, _ExerciseBestMarks> bestByExercise = {};
     final List<DashboardPersonalRecordItem> prs = [];
 
     for (final session in chronologicalSessions) {
       for (final exercise in session.exercises) {
-        for (final set in exercise.sets) {
+        final workingSets = exercise.sets.where((set) => !set.isWarmup).toList()
+          ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+        if (workingSets.isEmpty) continue;
+
+        final best = bestByExercise.putIfAbsent(
+          exercise.exerciseId,
+          () => _ExerciseBestMarks(),
+        );
+
+        for (final set in workingSets) {
           if (set.weight <= 0 || set.reps <= 0) continue;
 
-          final best = bestByExercise[exercise.exerciseId];
-          final isNewPr =
-              best == null ||
-              set.weight > best.weight ||
-              (set.weight == best.weight && set.reps > best.reps);
+          final setVolume = set.weight * set.reps;
 
-          if (isNewPr) {
-            bestByExercise[exercise.exerciseId] = _ExerciseBestMark(
-              weight: set.weight,
-              reps: set.reps,
-            );
+          final isWeightPr =
+              best.weight == null ||
+              set.weight > best.weight! ||
+              (set.weight == best.weight! && set.reps > (best.weightReps ?? 0));
 
+          final isRepsPr =
+              best.reps == null ||
+              set.reps > best.reps! ||
+              (set.reps == best.reps! && set.weight > (best.repsWeight ?? 0));
+
+          final isVolumePr =
+              best.volume == null ||
+              setVolume > best.volume! ||
+              (setVolume == best.volume! &&
+                  (set.weight > (best.volumeWeight ?? 0) ||
+                      set.reps > (best.volumeReps ?? 0)));
+
+          if (isWeightPr) {
             prs.add(
               DashboardPersonalRecordItem(
                 exerciseId: exercise.exerciseId,
@@ -254,8 +278,42 @@ class DashboardService {
                 weight: set.weight,
                 reps: set.reps,
                 occurredAt: set.createdAt,
+                type: DashboardPersonalRecordType.weight,
               ),
             );
+            best.weight = set.weight;
+            best.weightReps = set.reps;
+          }
+
+          if (isRepsPr) {
+            prs.add(
+              DashboardPersonalRecordItem(
+                exerciseId: exercise.exerciseId,
+                exerciseName: exercise.exerciseName,
+                weight: set.weight,
+                reps: set.reps,
+                occurredAt: set.createdAt,
+                type: DashboardPersonalRecordType.reps,
+              ),
+            );
+            best.reps = set.reps;
+            best.repsWeight = set.weight;
+          }
+
+          if (isVolumePr) {
+            prs.add(
+              DashboardPersonalRecordItem(
+                exerciseId: exercise.exerciseId,
+                exerciseName: exercise.exerciseName,
+                weight: set.weight,
+                reps: set.reps,
+                occurredAt: set.createdAt,
+                type: DashboardPersonalRecordType.volume,
+              ),
+            );
+            best.volume = setVolume;
+            best.volumeWeight = set.weight;
+            best.volumeReps = set.reps;
           }
         }
       }
@@ -275,9 +333,14 @@ class DashboardService {
   }
 }
 
-class _ExerciseBestMark {
-  final double weight;
-  final int reps;
+class _ExerciseBestMarks {
+  double? weight;
+  int? weightReps;
+  int? reps;
+  double? repsWeight;
+  double? volume;
+  double? volumeWeight;
+  int? volumeReps;
 
-  const _ExerciseBestMark({required this.weight, required this.reps});
+  _ExerciseBestMarks();
 }

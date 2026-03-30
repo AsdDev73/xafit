@@ -10,7 +10,11 @@ class ExercisePerformanceSnapshot {
   final int lastReps;
   final double prWeight;
   final int prReps;
+  final int bestReps;
+  final double bestRepsWeight;
   final double bestSetVolume;
+  final double bestSetVolumeWeight;
+  final int bestSetVolumeReps;
 
   const ExercisePerformanceSnapshot({
     required this.lastPerformedAt,
@@ -18,7 +22,11 @@ class ExercisePerformanceSnapshot {
     required this.lastReps,
     required this.prWeight,
     required this.prReps,
+    required this.bestReps,
+    required this.bestRepsWeight,
     required this.bestSetVolume,
+    required this.bestSetVolumeWeight,
+    required this.bestSetVolumeReps,
   });
 }
 
@@ -76,8 +84,7 @@ class SharedPrefsWorkoutRepository implements WorkoutRepository {
   }
 
   @override
-  Future<Map<String, ExercisePerformanceSnapshot>>
-  getExerciseSnapshots() async {
+  Future<Map<String, ExercisePerformanceSnapshot>> getExerciseSnapshots() async {
     final sessions = await getAllSessions();
     final Map<String, _MutableExerciseSnapshot> snapshots = {};
 
@@ -85,12 +92,15 @@ class SharedPrefsWorkoutRepository implements WorkoutRepository {
       for (final exercise in session.exercises) {
         if (exercise.sets.isEmpty) continue;
 
+        final workingSets = exercise.sets.where((set) => !set.isWarmup).toList();
+        if (workingSets.isEmpty) continue;
+
         final snapshot = snapshots.putIfAbsent(
           exercise.exerciseId,
           () => _MutableExerciseSnapshot(),
         );
 
-        for (final set in exercise.sets) {
+        for (final set in workingSets) {
           snapshot.registerSet(
             timestamp: set.createdAt,
             weight: set.weight,
@@ -118,7 +128,12 @@ class _MutableExerciseSnapshot {
   double? prWeight;
   int? prReps;
 
+  int? bestReps;
+  double? bestRepsWeight;
+
   double? bestSetVolume;
+  double? bestSetVolumeWeight;
+  int? bestSetVolumeReps;
 
   void registerSet({
     required DateTime timestamp,
@@ -131,19 +146,38 @@ class _MutableExerciseSnapshot {
       lastReps = reps;
     }
 
-    final shouldUpdatePr =
+    final shouldUpdateWeightPr =
         prWeight == null ||
         weight > prWeight! ||
         (weight == prWeight! && reps > (prReps ?? 0));
 
-    if (shouldUpdatePr) {
+    if (shouldUpdateWeightPr) {
       prWeight = weight;
       prReps = reps;
     }
 
+    final shouldUpdateRepsPr =
+        bestReps == null ||
+        reps > bestReps! ||
+        (reps == bestReps! && weight > (bestRepsWeight ?? 0));
+
+    if (shouldUpdateRepsPr) {
+      bestReps = reps;
+      bestRepsWeight = weight;
+    }
+
     final setVolume = weight * reps;
-    if (bestSetVolume == null || setVolume > bestSetVolume!) {
+    final shouldUpdateVolumePr =
+        bestSetVolume == null ||
+        setVolume > bestSetVolume! ||
+        (setVolume == bestSetVolume! &&
+            (weight > (bestSetVolumeWeight ?? 0) ||
+                reps > (bestSetVolumeReps ?? 0)));
+
+    if (shouldUpdateVolumePr) {
       bestSetVolume = setVolume;
+      bestSetVolumeWeight = weight;
+      bestSetVolumeReps = reps;
     }
   }
 
@@ -154,7 +188,11 @@ class _MutableExerciseSnapshot {
       lastReps: lastReps!,
       prWeight: prWeight!,
       prReps: prReps!,
+      bestReps: bestReps!,
+      bestRepsWeight: bestRepsWeight!,
       bestSetVolume: bestSetVolume!,
+      bestSetVolumeWeight: bestSetVolumeWeight!,
+      bestSetVolumeReps: bestSetVolumeReps!,
     );
   }
 }

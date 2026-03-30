@@ -96,6 +96,15 @@ class $WorkoutSessionsTable extends WorkoutSessions
     requiredDuringInsert: false,
     defaultValue: const Constant('[]'),
   );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -106,6 +115,7 @@ class $WorkoutSessionsTable extends WorkoutSessions
     durationSeconds,
     totalVolume,
     sessionTagsJson,
+    notes,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -190,6 +200,12 @@ class $WorkoutSessionsTable extends WorkoutSessions
         ),
       );
     }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
     return context;
   }
 
@@ -231,6 +247,10 @@ class $WorkoutSessionsTable extends WorkoutSessions
         DriftSqlType.string,
         data['${effectivePrefix}session_tags_json'],
       )!,
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
     );
   }
 
@@ -249,6 +269,7 @@ class WorkoutSession extends DataClass implements Insertable<WorkoutSession> {
   final int durationSeconds;
   final double totalVolume;
   final String sessionTagsJson;
+  final String? notes;
   const WorkoutSession({
     required this.id,
     required this.routineId,
@@ -258,6 +279,7 @@ class WorkoutSession extends DataClass implements Insertable<WorkoutSession> {
     required this.durationSeconds,
     required this.totalVolume,
     required this.sessionTagsJson,
+    this.notes,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -270,6 +292,9 @@ class WorkoutSession extends DataClass implements Insertable<WorkoutSession> {
     map['duration_seconds'] = Variable<int>(durationSeconds);
     map['total_volume'] = Variable<double>(totalVolume);
     map['session_tags_json'] = Variable<String>(sessionTagsJson);
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
     return map;
   }
 
@@ -283,6 +308,9 @@ class WorkoutSession extends DataClass implements Insertable<WorkoutSession> {
       durationSeconds: Value(durationSeconds),
       totalVolume: Value(totalVolume),
       sessionTagsJson: Value(sessionTagsJson),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
     );
   }
 
@@ -300,6 +328,7 @@ class WorkoutSession extends DataClass implements Insertable<WorkoutSession> {
       durationSeconds: serializer.fromJson<int>(json['durationSeconds']),
       totalVolume: serializer.fromJson<double>(json['totalVolume']),
       sessionTagsJson: serializer.fromJson<String>(json['sessionTagsJson']),
+      notes: serializer.fromJson<String?>(json['notes']),
     );
   }
   @override
@@ -314,6 +343,7 @@ class WorkoutSession extends DataClass implements Insertable<WorkoutSession> {
       'durationSeconds': serializer.toJson<int>(durationSeconds),
       'totalVolume': serializer.toJson<double>(totalVolume),
       'sessionTagsJson': serializer.toJson<String>(sessionTagsJson),
+      'notes': serializer.toJson<String?>(notes),
     };
   }
 
@@ -326,6 +356,7 @@ class WorkoutSession extends DataClass implements Insertable<WorkoutSession> {
     int? durationSeconds,
     double? totalVolume,
     String? sessionTagsJson,
+    Value<String?> notes = const Value.absent(),
   }) => WorkoutSession(
     id: id ?? this.id,
     routineId: routineId ?? this.routineId,
@@ -335,6 +366,7 @@ class WorkoutSession extends DataClass implements Insertable<WorkoutSession> {
     durationSeconds: durationSeconds ?? this.durationSeconds,
     totalVolume: totalVolume ?? this.totalVolume,
     sessionTagsJson: sessionTagsJson ?? this.sessionTagsJson,
+    notes: notes.present ? notes.value : this.notes,
   );
   WorkoutSession copyWithCompanion(WorkoutSessionsCompanion data) {
     return WorkoutSession(
@@ -356,6 +388,7 @@ class WorkoutSession extends DataClass implements Insertable<WorkoutSession> {
       sessionTagsJson: data.sessionTagsJson.present
           ? data.sessionTagsJson.value
           : this.sessionTagsJson,
+      notes: data.notes.present ? data.notes.value : this.notes,
     );
   }
 
@@ -369,7 +402,8 @@ class WorkoutSession extends DataClass implements Insertable<WorkoutSession> {
           ..write('finishedAt: $finishedAt, ')
           ..write('durationSeconds: $durationSeconds, ')
           ..write('totalVolume: $totalVolume, ')
-          ..write('sessionTagsJson: $sessionTagsJson')
+          ..write('sessionTagsJson: $sessionTagsJson, ')
+          ..write('notes: $notes')
           ..write(')'))
         .toString();
   }
@@ -384,6 +418,7 @@ class WorkoutSession extends DataClass implements Insertable<WorkoutSession> {
     durationSeconds,
     totalVolume,
     sessionTagsJson,
+    notes,
   );
   @override
   bool operator ==(Object other) =>
@@ -396,7 +431,8 @@ class WorkoutSession extends DataClass implements Insertable<WorkoutSession> {
           other.finishedAt == this.finishedAt &&
           other.durationSeconds == this.durationSeconds &&
           other.totalVolume == this.totalVolume &&
-          other.sessionTagsJson == this.sessionTagsJson);
+          other.sessionTagsJson == this.sessionTagsJson &&
+          other.notes == this.notes);
 }
 
 class WorkoutSessionsCompanion extends UpdateCompanion<WorkoutSession> {
@@ -408,6 +444,7 @@ class WorkoutSessionsCompanion extends UpdateCompanion<WorkoutSession> {
   final Value<int> durationSeconds;
   final Value<double> totalVolume;
   final Value<String> sessionTagsJson;
+  final Value<String?> notes;
   final Value<int> rowid;
   const WorkoutSessionsCompanion({
     this.id = const Value.absent(),
@@ -418,6 +455,7 @@ class WorkoutSessionsCompanion extends UpdateCompanion<WorkoutSession> {
     this.durationSeconds = const Value.absent(),
     this.totalVolume = const Value.absent(),
     this.sessionTagsJson = const Value.absent(),
+    this.notes = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   WorkoutSessionsCompanion.insert({
@@ -429,6 +467,7 @@ class WorkoutSessionsCompanion extends UpdateCompanion<WorkoutSession> {
     required int durationSeconds,
     required double totalVolume,
     this.sessionTagsJson = const Value.absent(),
+    this.notes = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        routineId = Value(routineId),
@@ -446,6 +485,7 @@ class WorkoutSessionsCompanion extends UpdateCompanion<WorkoutSession> {
     Expression<int>? durationSeconds,
     Expression<double>? totalVolume,
     Expression<String>? sessionTagsJson,
+    Expression<String>? notes,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -457,6 +497,7 @@ class WorkoutSessionsCompanion extends UpdateCompanion<WorkoutSession> {
       if (durationSeconds != null) 'duration_seconds': durationSeconds,
       if (totalVolume != null) 'total_volume': totalVolume,
       if (sessionTagsJson != null) 'session_tags_json': sessionTagsJson,
+      if (notes != null) 'notes': notes,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -470,6 +511,7 @@ class WorkoutSessionsCompanion extends UpdateCompanion<WorkoutSession> {
     Value<int>? durationSeconds,
     Value<double>? totalVolume,
     Value<String>? sessionTagsJson,
+    Value<String?>? notes,
     Value<int>? rowid,
   }) {
     return WorkoutSessionsCompanion(
@@ -481,6 +523,7 @@ class WorkoutSessionsCompanion extends UpdateCompanion<WorkoutSession> {
       durationSeconds: durationSeconds ?? this.durationSeconds,
       totalVolume: totalVolume ?? this.totalVolume,
       sessionTagsJson: sessionTagsJson ?? this.sessionTagsJson,
+      notes: notes ?? this.notes,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -512,6 +555,9 @@ class WorkoutSessionsCompanion extends UpdateCompanion<WorkoutSession> {
     if (sessionTagsJson.present) {
       map['session_tags_json'] = Variable<String>(sessionTagsJson.value);
     }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -529,6 +575,7 @@ class WorkoutSessionsCompanion extends UpdateCompanion<WorkoutSession> {
           ..write('durationSeconds: $durationSeconds, ')
           ..write('totalVolume: $totalVolume, ')
           ..write('sessionTagsJson: $sessionTagsJson, ')
+          ..write('notes: $notes, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2865,6 +2912,7 @@ typedef $$WorkoutSessionsTableCreateCompanionBuilder =
       required int durationSeconds,
       required double totalVolume,
       Value<String> sessionTagsJson,
+      Value<String?> notes,
       Value<int> rowid,
     });
 typedef $$WorkoutSessionsTableUpdateCompanionBuilder =
@@ -2877,6 +2925,7 @@ typedef $$WorkoutSessionsTableUpdateCompanionBuilder =
       Value<int> durationSeconds,
       Value<double> totalVolume,
       Value<String> sessionTagsJson,
+      Value<String?> notes,
       Value<int> rowid,
     });
 
@@ -2926,6 +2975,11 @@ class $$WorkoutSessionsTableFilterComposer
 
   ColumnFilters<String> get sessionTagsJson => $composableBuilder(
     column: $table.sessionTagsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -2978,6 +3032,11 @@ class $$WorkoutSessionsTableOrderingComposer
     column: $table.sessionTagsJson,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$WorkoutSessionsTableAnnotationComposer
@@ -3022,6 +3081,9 @@ class $$WorkoutSessionsTableAnnotationComposer
     column: $table.sessionTagsJson,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
 }
 
 class $$WorkoutSessionsTableTableManager
@@ -3069,6 +3131,7 @@ class $$WorkoutSessionsTableTableManager
                 Value<int> durationSeconds = const Value.absent(),
                 Value<double> totalVolume = const Value.absent(),
                 Value<String> sessionTagsJson = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => WorkoutSessionsCompanion(
                 id: id,
@@ -3079,6 +3142,7 @@ class $$WorkoutSessionsTableTableManager
                 durationSeconds: durationSeconds,
                 totalVolume: totalVolume,
                 sessionTagsJson: sessionTagsJson,
+                notes: notes,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -3091,6 +3155,7 @@ class $$WorkoutSessionsTableTableManager
                 required int durationSeconds,
                 required double totalVolume,
                 Value<String> sessionTagsJson = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => WorkoutSessionsCompanion.insert(
                 id: id,
@@ -3101,6 +3166,7 @@ class $$WorkoutSessionsTableTableManager
                 durationSeconds: durationSeconds,
                 totalVolume: totalVolume,
                 sessionTagsJson: sessionTagsJson,
+                notes: notes,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

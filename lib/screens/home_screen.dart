@@ -129,6 +129,28 @@ class _HomeScreenState extends State<HomeScreen> {
     return '$hour:$minute';
   }
 
+  String _personalRecordTypeLabel(DashboardPersonalRecordType type) {
+    switch (type) {
+      case DashboardPersonalRecordType.weight:
+        return 'PR de peso';
+      case DashboardPersonalRecordType.reps:
+        return 'PR de reps';
+      case DashboardPersonalRecordType.volume:
+        return 'PR de volumen';
+    }
+  }
+
+  String _personalRecordValue(DashboardPersonalRecordItem pr) {
+    switch (pr.type) {
+      case DashboardPersonalRecordType.weight:
+        return '${_formatWeight(pr.weight)} × ${pr.reps} reps';
+      case DashboardPersonalRecordType.reps:
+        return '${pr.reps} reps con ${_formatWeight(pr.weight)}';
+      case DashboardPersonalRecordType.volume:
+        return '${_formatWeight(pr.weight)} × ${pr.reps} • ${_formatWeight(pr.volume)}';
+    }
+  }
+
   String _formatDaysSince(DateTime date) {
     final diff = DateTime.now().difference(date).inDays;
 
@@ -159,6 +181,16 @@ class _HomeScreenState extends State<HomeScreen> {
     final remainingMinutes = minutes % 60;
     if (remainingMinutes == 0) return '$hours h';
     return '$hours h $remainingMinutes min';
+  }
+
+  String? _notePreview(String? notes) {
+    if (notes == null) return null;
+
+    final normalized = notes.replaceAll('\n', ' ').trim();
+    if (normalized.isEmpty) return null;
+
+    if (normalized.length <= 90) return normalized;
+    return '${normalized.substring(0, 90).trim()}...';
   }
 
   int _draftSetCount(WorkoutDraft draft) {
@@ -861,6 +893,41 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: Colors.white.withValues(alpha: 0.70),
               ),
             ),
+            if (_notePreview(session.notes) != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.sticky_note_2_outlined,
+                      size: 18,
+                      color: Colors.white.withValues(alpha: 0.68),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        _notePreview(session.notes)!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 13,
+                          height: 1.4,
+                          color: Colors.white.withValues(alpha: 0.74),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 14),
             Wrap(
               spacing: 8,
@@ -900,7 +967,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(
             prs.isEmpty
                 ? 'Cuando superes tus marcas en un ejercicio aparecerán aquí.'
-                : 'Tus últimos PRs detectados a partir de las sesiones guardadas.',
+                : 'Tus últimos PRs automáticos en peso, reps o volumen (sin contar calentamiento).',
             style: TextStyle(
               fontSize: 13.5,
               height: 1.4,
@@ -952,8 +1019,33 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                             const SizedBox(height: 4),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber.withValues(alpha: 0.16),
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: Text(
+                                    _personalRecordTypeLabel(pr.type),
+                                    style: const TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.amber,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
                             Text(
-                              'PR de ${_formatWeight(pr.weight)} × ${pr.reps} reps',
+                              _personalRecordValue(pr),
                               style: TextStyle(
                                 fontSize: 13.5,
                                 color: Colors.white.withValues(alpha: 0.78),

@@ -239,6 +239,42 @@ class WorkoutDetailScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildNotesCard(String notes) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.sticky_note_2_outlined,
+                  size: 20,
+                  color: Colors.white.withValues(alpha: 0.82),
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'Notas del entrenamiento',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              notes,
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.45,
+                color: Colors.white.withValues(alpha: 0.86),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildExerciseCard(WorkoutExerciseRecord exercise) {
     final volume = _exerciseVolume(exercise);
 
@@ -387,6 +423,10 @@ class WorkoutDetailScreen extends StatelessWidget {
               ],
             ),
           ),
+          if (session.hasNotes) ...[
+            const SizedBox(height: 18),
+            _buildNotesCard(session.notes!),
+          ],
           const SizedBox(height: 18),
           const Text(
             'Ejercicios registrados',

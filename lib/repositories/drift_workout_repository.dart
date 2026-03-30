@@ -79,6 +79,7 @@ class DriftWorkoutRepository implements WorkoutRepository {
           durationSeconds: sessionRow.durationSeconds,
           totalVolume: sessionRow.totalVolume,
           sessionTags: _decodeStringList(sessionRow.sessionTagsJson),
+          notes: sessionRow.notes,
           exercises: exercises,
         ),
       );
@@ -122,6 +123,7 @@ class DriftWorkoutRepository implements WorkoutRepository {
               durationSeconds: session.durationSeconds,
               totalVolume: session.totalVolume,
               sessionTagsJson: Value(jsonEncode(session.sessionTags)),
+              notes: Value(session.notes),
             ),
           );
 
@@ -199,6 +201,7 @@ class DriftWorkoutRepository implements WorkoutRepository {
     });
   }
 
+
   @override
   Future<Map<String, ExercisePerformanceSnapshot>>
   getExerciseSnapshots() async {
@@ -245,7 +248,11 @@ class _MutableExerciseSnapshot {
   int? lastReps;
   double? prWeight;
   int? prReps;
+  int? bestReps;
+  double? bestRepsWeight;
   double? bestSetVolume;
+  double? bestSetVolumeWeight;
+  int? bestSetVolumeReps;
 
   void registerSet({
     required DateTime timestamp,
@@ -258,19 +265,38 @@ class _MutableExerciseSnapshot {
       lastReps = reps;
     }
 
-    final shouldUpdatePr =
+    final shouldUpdateWeightPr =
         prWeight == null ||
         weight > prWeight! ||
         (weight == prWeight! && reps > (prReps ?? 0));
 
-    if (shouldUpdatePr) {
+    if (shouldUpdateWeightPr) {
       prWeight = weight;
       prReps = reps;
     }
 
+    final shouldUpdateRepsPr =
+        bestReps == null ||
+        reps > bestReps! ||
+        (reps == bestReps! && weight > (bestRepsWeight ?? 0));
+
+    if (shouldUpdateRepsPr) {
+      bestReps = reps;
+      bestRepsWeight = weight;
+    }
+
     final setVolume = weight * reps;
-    if (bestSetVolume == null || setVolume > bestSetVolume!) {
+    final shouldUpdateVolumePr =
+        bestSetVolume == null ||
+        setVolume > bestSetVolume! ||
+        (setVolume == bestSetVolume! &&
+            (weight > (bestSetVolumeWeight ?? 0) ||
+                reps > (bestSetVolumeReps ?? 0)));
+
+    if (shouldUpdateVolumePr) {
       bestSetVolume = setVolume;
+      bestSetVolumeWeight = weight;
+      bestSetVolumeReps = reps;
     }
   }
 
@@ -281,7 +307,11 @@ class _MutableExerciseSnapshot {
       lastReps: lastReps!,
       prWeight: prWeight!,
       prReps: prReps!,
+      bestReps: bestReps!,
+      bestRepsWeight: bestRepsWeight!,
       bestSetVolume: bestSetVolume!,
+      bestSetVolumeWeight: bestSetVolumeWeight!,
+      bestSetVolumeReps: bestSetVolumeReps!,
     );
   }
 }

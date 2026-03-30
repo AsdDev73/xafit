@@ -8,6 +8,7 @@ class WorkoutSession {
   final List<WorkoutExerciseRecord> exercises;
   final double totalVolume;
   final List<String> sessionTags;
+  final String? notes;
 
   const WorkoutSession({
     required this.id,
@@ -19,9 +20,12 @@ class WorkoutSession {
     required this.exercises,
     required this.totalVolume,
     required this.sessionTags,
+    this.notes,
   });
 
   int get totalExercises => exercises.length;
+
+  bool get hasNotes => notes != null && notes!.trim().isNotEmpty;
 
   int get totalSets {
     int total = 0;
@@ -51,6 +55,7 @@ class WorkoutSession {
       'durationSeconds': durationSeconds,
       'totalVolume': totalVolume,
       'sessionTags': sessionTags,
+      'notes': notes,
       'exercises': exercises.map((e) => e.toMap()).toList(),
     };
   }
@@ -65,6 +70,7 @@ class WorkoutSession {
       durationSeconds: map['durationSeconds'],
       totalVolume: (map['totalVolume'] as num).toDouble(),
       sessionTags: List<String>.from(map['sessionTags'] ?? const []),
+      notes: _normalizeNotes(map['notes']),
       exercises: (map['exercises'] as List)
           .map(
             (e) => WorkoutExerciseRecord.fromMap(Map<String, dynamic>.from(e)),
@@ -72,6 +78,15 @@ class WorkoutSession {
           .toList(),
     );
   }
+}
+
+String? _normalizeNotes(dynamic raw) {
+  if (raw == null) return null;
+
+  final value = raw.toString().trim();
+  if (value.isEmpty) return null;
+
+  return value;
 }
 
 class WorkoutExerciseRecord {

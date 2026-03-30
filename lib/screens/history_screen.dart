@@ -235,6 +235,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       final exerciseNames = session.exercises
           .map((exercise) => _normalizeText(exercise.exerciseName))
           .toList();
+      final normalizedNotes = _normalizeText(session.notes ?? '');
 
       final matchesSearch =
           query.isEmpty ||
@@ -243,7 +244,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
           normalizedTags.any(
             (tag) => _normalizeText(_displayTag(tag)).contains(query),
           ) ||
-          exerciseNames.any((name) => name.contains(query));
+          exerciseNames.any((name) => name.contains(query)) ||
+          normalizedNotes.contains(query);
 
       final matchesDate = _matchesDateFilter(session);
       return matchesTag && matchesSearch && matchesDate;
@@ -645,6 +647,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return '$preview • +$remaining más';
   }
 
+  String? _notePreview(String? notes) {
+    if (notes == null) return null;
+
+    final normalized = notes.replaceAll('\n', ' ').trim();
+    if (normalized.isEmpty) return null;
+
+    if (normalized.length <= 120) return normalized;
+    return '${normalized.substring(0, 120).trim()}...';
+  }
+
   Widget _buildSessionCard(WorkoutSession session) {
     return Card(
       child: InkWell(
@@ -714,6 +726,43 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   color: Colors.white.withValues(alpha: 0.76),
                 ),
               ),
+              if (_notePreview(session.notes) != null) ...[
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.04),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.sticky_note_2_outlined,
+                        size: 18,
+                        color: Colors.white.withValues(alpha: 0.68),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _notePreview(session.notes)!,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13,
+                            height: 1.4,
+                            color: Colors.white.withValues(alpha: 0.74),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 14),
               Wrap(
                 spacing: 8,
