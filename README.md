@@ -5,6 +5,39 @@ XaFit es una app de entrenamiento personal desarrollada en **Flutter** como proy
 La idea principal de la app no gira en torno a rutinas cerradas, sino en permitir registrar entrenamientos reales de forma rápida, flexible y útil para el día a día.  
 Actualmente la prioridad del proyecto es **Android**, con intención de dar soporte a **iPhone/iOS** más adelante. La versión web se usa como apoyo visual y de desarrollo, pero no es el objetivo principal del producto.
 
+![CI](https://github.com/AsdDev73/xafit/actions/workflows/ci.yml/badge.svg)
+
+---
+
+## Capturas
+
+<table>
+  <tr>
+    <td align="center"><b>Home</b></td>
+    <td align="center"><b>Dashboard</b></td>
+    <td align="center"><b>Entrenamiento activo</b></td>
+    <td align="center"><b>Historial</b></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/home1.png" width="180"/></td>
+    <td><img src="screenshots/home2.png" width="180"/></td>
+    <td><img src="screenshots/entrenamiento_activo.png" width="180"/></td>
+    <td><img src="screenshots/historial1.png" width="180"/></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Filtros de historial</b></td>
+    <td align="center"><b>Detalle de sesión</b></td>
+    <td align="center"><b>Biblioteca</b></td>
+    <td align="center"><b>Progreso corporal</b></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/historial2.png" width="180"/></td>
+    <td><img src="screenshots/historial3.png" width="180"/></td>
+    <td><img src="screenshots/biblioteca.png" width="180"/></td>
+    <td><img src="screenshots/progreso.png" width="180"/></td>
+  </tr>
+</table>
+
 ---
 
 ## Objetivo del proyecto
@@ -32,6 +65,7 @@ XaFit ya cuenta con una base funcional bastante completa:
 - Exportación e importación de backup
 - Guardado automático de borrador de entrenamiento
 - Persistencia principal con **Drift**
+- CI con `flutter analyze` y tests automáticos en cada push
 
 La app está pensada primero para **uso real offline**, dejando la sincronización como una futura evolución del proyecto.
 
@@ -50,7 +84,7 @@ La app está pensada primero para **uso real offline**, dejando la sincronizaci�
 - Último entrenamiento
 - Actividad reciente
 - Objetivo actual
-- Banner de **“Entreno en curso”** si existe un borrador guardado
+- Banner de **"Entreno en curso"** si existe un borrador guardado
 
 ### Entrenamiento libre
 - Añadir ejercicios
@@ -128,6 +162,7 @@ La app no busca obligar al usuario a seguir planes cerrados, sino ayudarle a reg
 - **Drift** como persistencia principal en móvil/escritorio
 - **shared_preferences** como fallback en web y para estados temporales
 - **flutter_local_notifications** para recordatorios
+- **fl_chart** para gráficas de progreso corporal
 - **file_picker** para importación/exportación
 - **share_plus** para compartir backups
 - **build_runner** para generación de código de Drift
@@ -186,7 +221,9 @@ Persistencia principal con **Drift**.
 ### Importante
 Si se modifica `app_database.dart`, hay que regenerar los archivos con:
 
-    flutter pub run build_runner build --delete-conflicting-outputs
+```bash
+flutter pub run build_runner build --delete-conflicting-outputs
+```
 
 ---
 
@@ -197,7 +234,7 @@ Es la plataforma principal en este momento y donde está centrado el desarrollo.
 
 ### iOS
 Está previsto como siguiente fase del proyecto.  
-La intención es preparar XaFit para uso real en iPhone, pero el foco actual ha sido primero consolidar la base funcional y offline en Android.
+La intención es preparar XaFit para uso real en iPhone, pero el foco actual ha sido primero consolidar la base funcional y offline en Android. La configuración de Xcode, Info.plist y notificaciones se completará en esa fase.
 
 ### Web
 Se usa como apoyo visual y para desarrollo rápido, pero no es la plataforma objetivo del producto.
@@ -230,6 +267,8 @@ Algunos puntos técnicos importantes que ya se han resuelto:
 - Sistema de borrador de entrenamiento saneado
 - `flutter analyze` limpio
 - Recordatorio semanal conectado y funcionando
+- Dependencia `live_activities` eliminada para evitar crash en Android
+- CI/CD configurado con GitHub Actions
 
 ---
 
@@ -243,42 +282,56 @@ Algunos puntos técnicos importantes que ya se han resuelto:
 
 ### Clonar el proyecto
 
-    git clone https://github.com/AsdDev73/xafit.git
-    cd xafit
+```bash
+git clone https://github.com/AsdDev73/xafit.git
+cd xafit
+```
 
 ### Instalar dependencias
 
-    flutter pub get
+```bash
+flutter pub get
+```
 
 ### Generar código de Drift si hace falta
 
-    flutter pub run build_runner build --delete-conflicting-outputs
+```bash
+flutter pub run build_runner build --delete-conflicting-outputs
+```
 
 ### Ejecutar la app
 
-    flutter run
+```bash
+flutter run
+```
 
 ### Ejecutar en Android
 
-    flutter run -d android
+```bash
+flutter run -d android
+```
 
 ### Ejecutar en Chrome como apoyo visual
 
-    flutter run -d chrome
+```bash
+flutter run -d chrome
+```
 
 ---
 
 ## Estructura general del proyecto
 
-    lib/
-    ├── data/
-    ├── db/
-    ├── models/
-    ├── repositories/
-    ├── screens/
-    ├── services/
-    ├── widgets/
-    └── main.dart
+```
+lib/
+├── data/
+├── db/
+├── models/
+├── repositories/
+├── screens/
+├── services/
+├── widgets/
+└── main.dart
+```
 
 ---
 
@@ -288,29 +341,14 @@ GitHub: [https://github.com/AsdDev73/xafit](https://github.com/AsdDev73/xafit)
 
 ---
 
-## Capturas
-
-Pendiente de añadir capturas reales de la app:
-
-- Home / Dashboard
-- Entrenamiento libre
-- Historial
-- Biblioteca
-- Progreso corporal
-- Recordatorio semanal
-- Backup
-
----
-
 ## Roadmap
 
 ### Próximos pasos
 - Mejoras visuales adicionales en Home y flujo general
 - Mejoras de métricas y estadísticas
 - Mejoras de UX en historial y progreso
-- Preparación real para iOS
+- Preparación real para iOS (Xcode, Info.plist, notificaciones)
 - Pulido de onboarding / empty states
-- Capturas y presentación visual para portfolio
 
 ### Futuro
 - Sincronización en la nube
