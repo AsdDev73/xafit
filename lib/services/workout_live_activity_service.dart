@@ -1,10 +1,7 @@
-import 'package:flutter/foundation.dart';
-import 'package:live_activities/live_activities.dart';
-
-/// Datos que enviamos a la Live Activity de iPhone.
+/// Datos que se enviarán a la Live Activity de iPhone cuando se implemente.
 ///
-/// Guardamos fechas reales en milisegundos porque luego, en SwiftUI,
-/// podemos pintarlas como temporizador vivo en la pantalla de bloqueo.
+/// La Live Activity mostrará el entrenamiento en curso en la pantalla de
+/// bloqueo y la Dynamic Island. Requiere iOS 16.1+ y configuración en Xcode.
 class WorkoutLiveActivityPayload {
   final String customId;
   final String title;
@@ -39,82 +36,27 @@ class WorkoutLiveActivityPayload {
   }
 }
 
-/// Fachada simple para crear, actualizar y cerrar la Live Activity.
+/// Fachada para Live Activities de iPhone.
 ///
-/// Esta clase no rompe Android/Web porque, fuera de iOS, simplemente devuelve
-/// sin hacer nada. El render real en pantalla de bloqueo se completa más tarde
-/// con la Widget Extension nativa en Xcode.
+/// Actualmente en modo stub — no hace nada en ninguna plataforma.
+/// Cuando se añada soporte iOS real, se implementará aquí con la
+/// Widget Extension nativa en Xcode y el paquete live_activities.
 class WorkoutLiveActivityService {
   WorkoutLiveActivityService._();
 
   static final WorkoutLiveActivityService instance =
       WorkoutLiveActivityService._();
 
-  /// Pon aquí exactamente el mismo App Group que configurarás en Xcode.
+  /// App Group que se configurará en Xcode al implementar Live Activities.
   static const String appGroupId = 'group.com.asddev73.xafit';
 
-  final LiveActivities _plugin = LiveActivities();
-  bool _initialized = false;
-
-  bool get _isSupportedPlatform =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-
-  Future<void> _ensureInitialized() async {
-    if (_initialized) return;
-    await _plugin.init(appGroupId: appGroupId);
-    _initialized = true;
-  }
-
-  Future<bool> areAvailable() async {
-    if (!_isSupportedPlatform) return false;
-
-    try {
-      await _ensureInitialized();
-
-      final supported = await _plugin.areActivitiesSupported();
-      if (!supported) return false;
-
-      return await _plugin.areActivitiesEnabled();
-    } catch (_) {
-      return false;
-    }
-  }
+  Future<bool> areAvailable() async => false;
 
   Future<String?> startOrUpdate({
     required WorkoutLiveActivityPayload payload,
     String? currentActivityId,
-  }) async {
-    if (!await areAvailable()) {
-      return currentActivityId;
-    }
+  }) async =>
+      currentActivityId;
 
-    final data = payload.toMap();
-
-    if (currentActivityId != null && currentActivityId.isNotEmpty) {
-      try {
-        await _plugin.updateActivity(currentActivityId, data);
-        return currentActivityId;
-      } catch (_) {
-        // Si el id ya no existe, intentamos crear una nueva actividad.
-      }
-    }
-
-    try {
-      return await _plugin.createActivity(payload.customId, data);
-    } catch (_) {
-      return currentActivityId;
-    }
-  }
-
-  Future<void> end(String? activityId) async {
-    if (!_isSupportedPlatform) return;
-    if (activityId == null || activityId.isEmpty) return;
-
-    try {
-      await _ensureInitialized();
-      await _plugin.endActivity(activityId);
-    } catch (_) {
-      // No rompemos la app si la actividad ya no existe o el cierre falla.
-    }
-  }
+  Future<void> end(String? activityId) async {}
 }
