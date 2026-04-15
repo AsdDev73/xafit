@@ -2,63 +2,63 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>CADisableMinimumFrameDurationOnPhone</key>
-	<true/>
-	<key>CFBundleDevelopmentRegion</key>
-	<string>$(DEVELOPMENT_LANGUAGE)</string>
+
+	<!-- ============================================================ -->
+	<!-- CONFIGURACIÓN BÁSICA DE LA APP                               -->
+	<!-- ============================================================ -->
+
+	<!-- Nombre que ve el usuario bajo el icono en la pantalla de inicio -->
 	<key>CFBundleDisplayName</key>
-	<string>Xafit</string>
-	<key>CFBundleExecutable</key>
-	<string>$(EXECUTABLE_NAME)</string>
+	<string>XaFit</string>
+
+	<!-- Identificador único de la app. Debe coincidir exactamente     -->
+	<!-- con el Bundle ID que configures en Xcode y Apple Developer.   -->
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-	<key>CFBundleInfoDictionaryVersion</key>
-	<string>6.0</string>
+
+	<!-- Nombre interno del bundle (no visible para el usuario) -->
 	<key>CFBundleName</key>
 	<string>xafit</string>
-	<key>CFBundlePackageType</key>
-	<string>APPL</string>
+
+	<!-- Versión visible para el usuario en la App Store (ej: 1.0.0) -->
 	<key>CFBundleShortVersionString</key>
 	<string>$(FLUTTER_BUILD_NAME)</string>
-	<key>CFBundleSignature</key>
-	<string>????</string>
+
+	<!-- Número de build interno. Se incrementa en cada subida a App Store -->
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
-	<key>LSRequiresIPhoneOS</key>
-	<true/>
-	<key>UIApplicationSceneManifest</key>
-	<dict>
-		<key>UIApplicationSupportsMultipleScenes</key>
-		<false/>
-		<key>UISceneConfigurations</key>
-		<dict>
-			<key>UIWindowSceneSessionRoleApplication</key>
-			<array>
-				<dict>
-					<key>UISceneClassName</key>
-					<string>UIWindowScene</string>
-					<key>UISceneConfigurationName</key>
-					<string>flutter</string>
-					<key>UISceneDelegateClassName</key>
-					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
-					<key>UISceneStoryboardFile</key>
-					<string>Main</string>
-				</dict>
-			</array>
-		</dict>
-	</dict>
-	<key>UIApplicationSupportsIndirectInputEvents</key>
-	<true/>
-	<key>UILaunchStoryboardName</key>
-	<string>LaunchScreen</string>
-	<key>UIMainStoryboardFile</key>
-	<string>Main</string>
+
+	<!-- Tipo de paquete. CFBundlePackageType siempre es APPL para apps -->
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+
+	<!-- Clase principal del delegate. Flutter lo gestiona automáticamente -->
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+
+	<!-- Ejecutable principal del bundle -->
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+
+	<!-- Versión de la especificación InfoDictionary -->
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+
+	<!-- Versión mínima de iOS requerida.                              -->
+	<!-- 16.1 mínimo para Live Activities (cuando se implemente).      -->
+	<!-- 14.0 es suficiente para el resto de funcionalidades de XaFit. -->
+	<key>MinimumOSVersion</key>
+	<string>14.0</string>
+
+	<!-- Orientaciones soportadas en iPhone -->
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+
+	<!-- Orientaciones soportadas en iPad -->
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
@@ -66,7 +66,46 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>NSSupportsLiveActivities</key>
+
+	<!-- Necesario para que Flutter renderice correctamente en pantallas modernas -->
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<false/>
+
+	<!-- ============================================================ -->
+	<!-- PERMISOS — NOTIFICACIONES                                     -->
+	<!-- Sin este texto, iOS rechaza la solicitud de permiso           -->
+	<!-- y flutter_local_notifications no funciona.                    -->
+	<!-- ============================================================ -->
+	<key>NSUserNotificationUsageDescription</key>
+	<string>XaFit usa notificaciones para recordarte registrar tu peso semanalmente.</string>
+
+	<!-- ============================================================ -->
+	<!-- PERMISOS — ACCESO A FICHEROS (backup)                        -->
+	<!-- Necesario para que file_picker pueda importar/exportar        -->
+	<!-- archivos JSON de backup desde la app Archivos de iOS.         -->
+	<!-- ============================================================ -->
+
+	<!-- Permite que los archivos de XaFit aparezcan en la app Archivos de iOS -->
+	<key>UIFileSharingEnabled</key>
 	<true/>
+
+	<!-- Permite abrir documentos directamente desde la app Archivos  -->
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+
+	<!-- ============================================================ -->
+	<!-- CONFIGURACIÓN DE FLUTTER                                      -->
+	<!-- ============================================================ -->
+
+	<!-- Desactiva el gesto de retroceso con deslizamiento en iOS 13+ -->
+	<!-- Flutter gestiona la navegación internamente.                  -->
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+
+	<!-- Permite que Flutter use el área completa de la pantalla       -->
+	<!-- incluyendo el notch y la Dynamic Island.                      -->
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+
 </dict>
 </plist>

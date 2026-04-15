@@ -1,0 +1,73 @@
+# Podfile — Gestor de dependencias nativas para iOS
+# CocoaPods descarga e integra las librerías nativas que necesitan
+# los plugins de Flutter (flutter_local_notifications, file_picker, etc.)
+#
+# Para instalar/actualizar las dependencias después de cualquier cambio:
+#   cd ios
+#   pod install
+#
+# IMPORTANTE: Siempre abre el proyecto en Xcode usando Runner.xcworkspace
+# (no Runner.xcodeproj) después de hacer pod install.
+
+# Versión mínima de iOS requerida por XaFit.
+# flutter_local_notifications requiere iOS 14.0 como mínimo.
+# Si en el futuro se activan Live Activities, subir a 16.1.
+platform :ios, '14.0'
+
+# Evita que CocoaPods genere warnings innecesarios sobre estadísticas
+ENV['COCOAPODS_DISABLE_STATS'] = 'true'
+
+project 'Runner', {
+  'Debug' => :debug,
+  'Profile' => :release,
+  'Release' => :release,
+}
+
+def flutter_root
+  # Busca la instalación de Flutter en el sistema.
+  # flutter_export_environment.sh lo genera automáticamente Flutter al compilar.
+  generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
+  unless File.exist?(generated_xcode_build_settings_path)
+    raise "#{generated_xcode_build_settings_path} must exist. If you're running pod install manually, make sure flutter pub get is executed first"
+  end
+
+  File.foreach(generated_xcode_build_settings_path) do |line|
+    matches = line.match(/FLUTTER_ROOT\=(.*)/)
+    return matches[1].strip if matches
+  end
+  raise "FLUTTER_ROOT not found in #{generated_xcode_build_settings_path}. Try deleting Generated.xcconfig and running flutter pub get"
+end
+
+require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
+
+flutter_ios_podfile_setup
+
+target 'Runner' do
+  use_frameworks!
+  use_modular_headers!
+
+  # Integra automáticamente todos los plugins de Flutter declarados en pubspec.yaml
+  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+
+  target 'RunnerTests' do
+    inherit! :search_paths
+  end
+end
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    flutter_additional_ios_build_settings(target)
+
+    target.build_configurations.each do |config|
+      # Fuerza la versión mínima de iOS en todos los pods.
+      # Algunos pods pueden declarar versiones más bajas por defecto
+      # y esto puede causar warnings o errores de compilación.
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
+
+      # Desactiva el sandboxing en scripts de compilación de pods.
+      # Necesario para que build_runner y otros generadores funcionen
+      # correctamente en el entorno de Xcode/Codemagic.
+      config.build_settings['ENABLE_USER_SCRIPT_SANDBOXING'] = 'NO'
+    end
+  end
+end
