@@ -12,10 +12,6 @@
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
-            <!-- Specifies an Android theme to apply to this Activity as soon as
-                 the Android process has started. This theme is visible to the user
-                 while the Flutter UI initializes. After that, this theme continues
-                 to determine the Window background behind the Flutter UI. -->
             <meta-data
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
@@ -25,17 +21,38 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-        <!-- Don't delete the meta-data below.
-             This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
+
+        <!-- Flutter embedding -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-    </application>
-    <!-- Required to query activities that can process text, see:
-         https://developer.android.com/training/package-visibility and
-         https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.
 
-         In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
+        <!--
+            Registro del widget de pantalla de inicio de XaFit.
+
+            El sistema Android llama a XafitWidgetProvider cuando:
+            - El usuario añade el widget al launcher por primera vez
+            - Pasan los 30 min del updatePeriodMillis
+            - La app llama a HomeWidget.updateWidget() desde Dart
+
+            android:exported="true" es obligatorio para que el launcher
+            pueda enviar el broadcast APPWIDGET_UPDATE al receiver.
+        -->
+        <receiver
+            android:name=".XafitWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <!-- Apunta al xml con los metadatos del widget (tamaño, layout, etc.) -->
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/xafit_widget_info" />
+        </receiver>
+
+    </application>
+
+    <!-- Necesario para que Flutter pueda procesar texto seleccionado -->
     <queries>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>

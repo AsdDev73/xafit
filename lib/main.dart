@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'screens/main_navigation_screen.dart';
 import 'services/app_repositories.dart';
+import 'services/home_widget_service.dart';
 import 'services/notification_service.dart';
 
 Future<void> main() async {
@@ -16,6 +17,14 @@ Future<void> main() async {
     await NotificationService.init();
   } catch (e) {
     debugPrint('Notification init error: $e');
+  }
+
+  // Inicialización del widget de pantalla de inicio.
+  // Si falla no interrumpe el arranque de la app.
+  try {
+    await HomeWidgetService.instance.init();
+  } catch (e) {
+    debugPrint('HomeWidget init error: $e');
   }
 
   runApp(const XaFitApp());

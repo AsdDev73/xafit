@@ -21,6 +21,9 @@ dependencies:
   path_provider: ^2.1.5
   file_picker: ^8.1.2
   share_plus: ^10.0.2
+  # Widget de pantalla de inicio (Android e iOS)
+  # Permite mostrar datos de XaFit en el home screen sin abrir la app.
+  home_widget: ^0.7.0
 
 dev_dependencies:
   flutter_test:

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Metadatos del widget de Android.
+  Define el tamaño mínimo, el layout y cada cuánto se actualiza.
+
+  minWidth / minHeight: tamaño mínimo que ocupa el widget en el launcher.
+  4x2 celdas es el tamaño estándar para widgets de resumen.
+
+  updatePeriodMillis: cada cuánto Android fuerza una actualización automática.
+  Máximo permitido por Android = 1800000 ms (30 minutos).
+  La actualización real ocurre cuando la app llama a HomeWidget.updateWidget().
+-->
+<appwidget-provider
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="250dp"
+    android:minHeight="110dp"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/xafit_widget"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:description="@string/app_name">
+</appwidget-provider>

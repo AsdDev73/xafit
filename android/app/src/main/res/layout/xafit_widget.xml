@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Layout del widget de XaFit para la pantalla de inicio de Android.
+
+  RemoteViews (el sistema de vistas que usa Android para los widgets)
+  tiene restricciones importantes:
+  - Solo soporta un subconjunto de layouts: LinearLayout, RelativeLayout,
+    FrameLayout, GridLayout.
+  - No soporta ConstraintLayout ni la mayoría de vistas personalizadas.
+  - No soporta código Kotlin/Java en tiempo real; todo se actualiza desde
+    el BroadcastReceiver (XafitWidgetProvider.kt).
+
+  Estructura del widget:
+  ┌─────────────────────────────┐
+  │ XaFit  ·  Esta semana      │
+  │                             │
+  │  3 sesiones  │  1.2 t      │
+  │                             │
+  │  Último: Press banca · Hoy │
+  └─────────────────────────────┘
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="#CC1A1F2B"
+    android:gravity="center_vertical">
+
+    <!-- Fila superior: título de la app y etiqueta "Esta semana" -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+
+        <!-- Nombre de la app -->
+        <TextView
+            android:id="@+id/widget_app_name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="XaFit"
+            android:textColor="#FF4FC3F7"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.05" />
+
+        <!-- Etiqueta "Esta semana" -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Esta semana"
+            android:textColor="#99FFFFFF"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <!-- Fila de métricas principales: sesiones y volumen -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="10dp">
+
+        <!-- Bloque sesiones -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <!-- Número de sesiones (se actualiza desde XafitWidgetProvider.kt) -->
+            <TextView
+                android:id="@+id/widget_weekly_sessions"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textColor="#FFFFFFFF"
+                android:textSize="28sp"
+                android:textStyle="bold"
+                android:lineSpacingExtra="-2dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="sesiones"
+                android:textColor="#99FFFFFF"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <!-- Separador vertical -->
+        <View
+            android:layout_width="1dp"
+            android:layout_height="40dp"
+            android:layout_gravity="center_vertical"
+            android:layout_marginHorizontal="12dp"
+            android:background="#33FFFFFF" />
+
+        <!-- Bloque volumen -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <!-- Volumen semanal formateado (ej: "1.2 t") -->
+            <TextView
+                android:id="@+id/widget_weekly_volume"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0 kg"
+                android:textColor="#FFFFFFFF"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:lineSpacingExtra="-2dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="volumen"
+                android:textColor="#99FFFFFF"
+                android:textSize="11sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Separador horizontal -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginBottom="8dp"
+        android:background="#22FFFFFF" />
+
+    <!-- Fila inferior: último ejercicio y fecha -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <!-- Nombre del último ejercicio -->
+        <TextView
+            android:id="@+id/widget_last_exercise"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Sin entrenamientos aún"
+            android:textColor="#CCFFFFFF"
+            android:textSize="12sp"
+            android:ellipsize="end"
+            android:maxLines="1" />
+
+        <!-- Fecha del último entreno -->
+        <TextView
+            android:id="@+id/widget_last_date"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textColor="#66FFFFFF"
+            android:textSize="11sp"
+            android:layout_marginStart="8dp" />
+    </LinearLayout>
+
+</LinearLayout>
