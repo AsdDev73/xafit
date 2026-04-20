@@ -223,8 +223,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final draft = _activeDraft;
     if (draft == null) return;
 
-    final confirmed =
-        await showDialog<bool>(
+    final confirmed = await showDialog<bool>(
           context: context,
           builder: (dialogContext) {
             return AlertDialog(
@@ -349,7 +348,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFF1E2A44), Color(0xFF203A43), Color(0xFF2C5364)],
@@ -371,30 +370,30 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(
             'Hola, $alias',
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 13,
               color: Colors.white.withValues(alpha: 0.88),
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           const Text(
             'Tu entrenamiento empieza aquí',
             style: TextStyle(
-              fontSize: 26,
+              fontSize: 22,
               fontWeight: FontWeight.w800,
               height: 1.1,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Text(
             _heroSubtitle(),
             style: TextStyle(
-              fontSize: 14,
-              height: 1.4,
+              fontSize: 13.5,
+              height: 1.35,
               color: Colors.white.withValues(alpha: 0.90),
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -406,7 +405,7 @@ class _HomeScreenState extends State<HomeScreen> {
               _buildInfoPill('${_dashboard.totalSessions} sesiones totales'),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
@@ -555,9 +554,8 @@ class _HomeScreenState extends State<HomeScreen> {
             Expanded(
               child: _buildMetricCard(
                 label: 'Peso actual',
-                value: currentWeight != null
-                    ? _formatWeight(currentWeight)
-                    : '—',
+                value:
+                    currentWeight != null ? _formatWeight(currentWeight) : '—',
                 icon: Icons.monitor_weight_outlined,
                 hint: currentWeight != null
                     ? 'Tomado de tu último registro corporal'
@@ -901,7 +899,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
+                  border:
+                      Border.all(color: Colors.white.withValues(alpha: 0.04)),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1121,36 +1120,36 @@ class _HomeScreenState extends State<HomeScreen> {
       onRefresh: _refreshHome,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
         children: [
           _buildHeroCard(),
           if (_activeDraft != null) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             _buildDraftBanner(_activeDraft!),
           ],
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
           _buildSectionTitle('Resumen'),
           const SizedBox(height: 12),
           _buildTopMetrics(),
           const SizedBox(height: 12),
           _buildQuickInsightStrip(),
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
           _buildSectionTitle('Enfoque de la semana'),
           const SizedBox(height: 12),
           _buildWeeklyFocusCard(),
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
           _buildSectionTitle('Mejores marcas'),
           const SizedBox(height: 12),
           _buildRecentPrsCard(),
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
           _buildSectionTitle('Objetivo actual'),
           const SizedBox(height: 12),
           _buildGoalCard(),
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
           _buildSectionTitle('Último entrenamiento'),
           const SizedBox(height: 12),
           _buildLastSessionCard(),
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
           _buildSectionTitle('Actividad reciente'),
           const SizedBox(height: 12),
           _buildRecentActivitySection(),
@@ -1159,15 +1158,16 @@ class _HomeScreenState extends State<HomeScreen> {
     );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Inicio')),
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 220),
-        child: _isLoading
-            ? const Center(
-                key: ValueKey('loading'),
-                child: CircularProgressIndicator(),
-              )
-            : KeyedSubtree(key: const ValueKey('content'), child: body),
+      body: SafeArea(
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          child: _isLoading
+              ? const Center(
+                  key: ValueKey('loading'),
+                  child: CircularProgressIndicator(),
+                )
+              : KeyedSubtree(key: const ValueKey('content'), child: body),
+        ),
       ),
     );
   }
