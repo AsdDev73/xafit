@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'dashboard_service.dart';
 
 // home_widget desactivado temporalmente hasta que el plugin soporte
