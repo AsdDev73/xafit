@@ -627,47 +627,51 @@ class _ProgressScreenState extends State<ProgressScreen> {
     final latestWaist = _latestWaist;
     final delta = _weightDelta;
 
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 10,
-      crossAxisSpacing: 10,
-      childAspectRatio: 1.20,
-      children: [
-        _MetricCard(
-          title: 'Peso actual',
-          value: latestWeight == null
-              ? '—'
-              : '${_formatDouble(latestWeight)} kg',
-          subtitle: _entries.isEmpty ? 'Sin registros' : 'Última medición',
-          icon: Icons.monitor_weight_outlined,
-        ),
-        _MetricCard(
-          title: 'Cambio',
-          value: delta == null
-              ? '—'
-              : '${delta > 0 ? '+' : ''}${_formatDouble(delta)} kg',
-          subtitle: _entries.length < 2
-              ? 'Faltan datos'
-              : 'Desde el primer registro',
-          icon: Icons.trending_up_rounded,
-        ),
-        _MetricCard(
-          title: '% Grasa',
-          value: latestBodyFat == null
-              ? '—'
-              : '${_formatDouble(latestBodyFat)}%',
-          subtitle: latestBodyFat == null ? 'No registrada' : 'Última medición',
-          icon: Icons.percent_rounded,
-        ),
-        _MetricCard(
-          title: 'Cintura',
-          value: latestWaist == null ? '—' : '${_formatDouble(latestWaist)} cm',
-          subtitle: latestWaist == null ? 'No registrada' : 'Última medición',
-          icon: Icons.straighten_rounded,
-        ),
-      ],
+    final cards = [
+      _MetricCard(
+        title: 'Peso actual',
+        value: latestWeight == null ? '—' : '${_formatDouble(latestWeight)} kg',
+        subtitle: _entries.isEmpty ? 'Sin registros' : 'Última medición',
+        icon: Icons.monitor_weight_outlined,
+      ),
+      _MetricCard(
+        title: 'Cambio',
+        value: delta == null
+            ? '—'
+            : '${delta > 0 ? '+' : ''}${_formatDouble(delta)} kg',
+        subtitle: _entries.length < 2
+            ? 'Faltan datos'
+            : 'Desde el primer registro',
+        icon: Icons.trending_up_rounded,
+      ),
+      _MetricCard(
+        title: '% Grasa',
+        value: latestBodyFat == null ? '—' : '${_formatDouble(latestBodyFat)}%',
+        subtitle: latestBodyFat == null ? 'No registrada' : 'Última medición',
+        icon: Icons.percent_rounded,
+      ),
+      _MetricCard(
+        title: 'Cintura',
+        value: latestWaist == null ? '—' : '${_formatDouble(latestWaist)} cm',
+        subtitle: latestWaist == null ? 'No registrada' : 'Última medición',
+        icon: Icons.straighten_rounded,
+      ),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 380;
+
+        return GridView.count(
+          crossAxisCount: isCompact ? 1 : 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          childAspectRatio: isCompact ? 2.6 : 1.12,
+          children: cards,
+        );
+      },
     );
   }
 
@@ -995,11 +999,14 @@ class _MetricCard extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Icon(icon, size: 22),
-            const Spacer(),
+            const SizedBox(height: 14),
             Text(
               title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.white.withValues(alpha: 0.72),
@@ -1008,11 +1015,15 @@ class _MetricCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 4),
             Text(
               subtitle,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 11,
                 color: Colors.white.withValues(alpha: 0.62),

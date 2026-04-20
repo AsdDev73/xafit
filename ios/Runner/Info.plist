@@ -24,6 +24,8 @@
     <true/>
     <key>MinimumOSVersion</key>
     <string>14.0</string>
+    <key>UILaunchStoryboardName</key>
+    <string>LaunchScreen</string>
     <key>NSUserNotificationUsageDescription</key>
     <string>XaFit usa notificaciones para recordarte registrar tu peso semanalmente.</string>
 
@@ -56,8 +58,6 @@
     <key>UISupportedInterfaceOrientations</key>
     <array>
         <string>UIInterfaceOrientationPortrait</string>
-        <string>UIInterfaceOrientationLandscapeLeft</string>
-        <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
     <key>UISupportedInterfaceOrientations~ipad</key>
     <array>
