@@ -95,8 +95,8 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   }
 
   Future<void> _loadCustomExercises() async {
-    final customExercises = await _customExerciseRepository
-        .getAllCustomExercises();
+    final customExercises =
+        await _customExerciseRepository.getAllCustomExercises();
 
     if (!mounted) return;
 
@@ -327,18 +327,15 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       for (final set in workingSets) {
         final setVolume = set.weight * set.reps;
 
-        final isWeightPr =
-            bestWeight == null ||
+        final isWeightPr = bestWeight == null ||
             set.weight > bestWeight ||
             (set.weight == bestWeight && set.reps > (bestWeightReps ?? 0));
 
-        final isRepsPr =
-            bestReps == null ||
+        final isRepsPr = bestReps == null ||
             set.reps > bestReps ||
             (set.reps == bestReps && set.weight > (bestRepsWeight ?? 0));
 
-        final isVolumePr =
-            bestVolume == null ||
+        final isVolumePr = bestVolume == null ||
             setVolume > bestVolume ||
             (setVolume == bestVolume &&
                 (set.weight > (bestVolumeWeight ?? 0) ||
@@ -605,8 +602,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     if (draft.title != widget.title) return;
     if (draft.exercises.isEmpty) return;
 
-    final shouldRestore =
-        await showDialog<bool>(
+    final shouldRestore = await showDialog<bool>(
           context: context,
           builder: (context) {
             return AlertDialog(
@@ -684,8 +680,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     if (_isSaving) return false;
     if (!_hasUnsavedChanges) return true;
 
-    final shouldLeave =
-        await showDialog<bool>(
+    final shouldLeave = await showDialog<bool>(
           context: context,
           builder: (context) {
             return AlertDialog(
@@ -742,9 +737,8 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       ),
       builder: (_) => _ExercisePickerSheet(
         exercises: _allAvailableExercises,
-        alreadySelectedIds: _selectedExercises
-            .map((e) => e.exercise.id)
-            .toSet(),
+        alreadySelectedIds:
+            _selectedExercises.map((e) => e.exercise.id).toSet(),
       ),
     );
 
@@ -768,9 +762,8 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   }) async {
     final isEditing = setIndex != null;
     final existingSet = isEditing ? entry.sets[setIndex] : null;
-    final previousSet = !isEditing && entry.sets.isNotEmpty
-        ? entry.sets.last
-        : null;
+    final previousSet =
+        !isEditing && entry.sets.isNotEmpty ? entry.sets.last : null;
     final snapshot = _statsForExercise(entry.exercise);
 
     final result = await showModalBottomSheet<_SetEditorResult>(
@@ -788,17 +781,17 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
           initialWeightText: existingSet != null
               ? _formatWeight(existingSet.weight)
               : previousSet != null
-              ? _formatWeight(previousSet.weight)
-              : snapshot != null
-              ? _formatWeight(snapshot.lastWeight)
-              : '',
+                  ? _formatWeight(previousSet.weight)
+                  : snapshot != null
+                      ? _formatWeight(snapshot.lastWeight)
+                      : '',
           initialRepsText: existingSet != null
               ? existingSet.reps.toString()
               : previousSet != null
-              ? previousSet.reps.toString()
-              : snapshot != null
-              ? snapshot.lastReps.toString()
-              : '',
+                  ? previousSet.reps.toString()
+                  : snapshot != null
+                      ? snapshot.lastReps.toString()
+                      : '',
           previousSetWeight: previousSet?.weight,
           previousSetReps: previousSet?.reps,
           previousSetIsWarmup: previousSet?.isWarmup ?? false,
@@ -810,8 +803,8 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
           restLabel: isEditing
               ? _formatRestLabel(existingSet!.restSeconds)
               : _hasStartedRestTracking
-              ? _formatRestLabel(_currentRestSeconds)
-              : '0s',
+                  ? _formatRestLabel(_currentRestSeconds)
+                  : '0s',
           formatWeight: _formatWeight,
         );
       },
@@ -979,8 +972,8 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
         personalRecords.isNotEmpty
             ? '${personalRecords.length} PRs nuevos guardados'
             : finishDecision.notes == null
-            ? 'Entrenamiento guardado'
-            : 'Entrenamiento y nota guardados',
+                ? 'Entrenamiento guardado'
+                : 'Entrenamiento y nota guardados',
       );
       Navigator.of(context).pop(true);
     } finally {
@@ -1997,12 +1990,11 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
   }
 
   List<String> get _muscleGroups {
-    final groups =
-        _availableExercisesExcludingSelected
-            .map((e) => e.muscleGroup)
-            .toSet()
-            .toList()
-          ..sort();
+    final groups = _availableExercisesExcludingSelected
+        .map((e) => e.muscleGroup)
+        .toSet()
+        .toList()
+      ..sort();
     return groups;
   }
 
@@ -2058,14 +2050,12 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
     final query = _query.trim().toLowerCase();
 
     final filtered = _availableExercisesExcludingSelected.where((exercise) {
-      final matchesQuery =
-          query.isEmpty ||
+      final matchesQuery = query.isEmpty ||
           exercise.name.toLowerCase().contains(query) ||
           exercise.muscleGroup.toLowerCase().contains(query) ||
           exercise.tags.any((tag) => tag.toLowerCase().contains(query));
 
-      final matchesGroup =
-          _selectedMuscleGroup == null ||
+      final matchesGroup = _selectedMuscleGroup == null ||
           exercise.muscleGroup == _selectedMuscleGroup;
 
       final matchesFavorites =
@@ -2198,134 +2188,140 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
               child: _isLoadingFavorites
                   ? const Center(child: CircularProgressIndicator())
                   : exercises.isEmpty
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Text(
-                          _showFavoritesOnly
-                              ? 'No tienes favoritos disponibles con ese filtro'
-                              : 'No hay ejercicios que coincidan con tu búsqueda',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.72),
-                          ),
-                        ),
-                      ),
-                    )
-                  : ListView.separated(
-                      shrinkWrap: true,
-                      itemCount: exercises.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (context, index) {
-                        final exercise = exercises[index];
-                        final isFavorite = _favoriteIds.contains(exercise.id);
-
-                        return Material(
-                          color: Colors.white.withValues(alpha: 0.03),
-                          borderRadius: BorderRadius.circular(18),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(18),
-                            onTap: () => Navigator.of(context).pop(exercise),
-                            child: Padding(
-                              padding: const EdgeInsets.all(14),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 42,
-                                    height: 42,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.08,
-                                      ),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: const Icon(
-                                      Icons.sports_gymnastics_rounded,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                exercise.name,
-                                                style: const TextStyle(
-                                                  fontSize: 15,
-                                                  fontWeight: FontWeight.w700,
-                                                ),
-                                              ),
-                                            ),
-                                            IconButton(
-                                              tooltip: isFavorite
-                                                  ? 'Quitar de favoritos'
-                                                  : 'Añadir a favoritos',
-                                              onPressed: () =>
-                                                  _toggleFavorite(exercise),
-                                              icon: Icon(
-                                                isFavorite
-                                                    ? Icons.star_rounded
-                                                    : Icons.star_border_rounded,
-                                                color: isFavorite
-                                                    ? Colors.amber
-                                                    : Colors.white70,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          exercise.muscleGroup,
-                                          style: TextStyle(
-                                            color: Colors.white.withValues(
-                                              alpha: 0.72,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Wrap(
-                                          spacing: 6,
-                                          runSpacing: 6,
-                                          children: [
-                                            if (isFavorite)
-                                              const _MiniTagChip(
-                                                icon: Icons.star_rounded,
-                                                label: 'Favorito',
-                                              ),
-                                            ...exercise.tags
-                                                .take(3)
-                                                .map(
-                                                  (tag) => _MiniTagChip(
-                                                    icon: Icons.sell_outlined,
-                                                    label: tag,
-                                                  ),
-                                                ),
-                                            _MiniTagChip(
-                                              icon: exercise.isCustom
-                                                  ? Icons.auto_fix_high_rounded
-                                                  : Icons.layers_outlined,
-                                              label: exercise.isCustom
-                                                  ? 'Custom'
-                                                  : 'Base',
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  const Icon(Icons.chevron_right_rounded),
-                                ],
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Text(
+                              _showFavoritesOnly
+                                  ? 'No tienes favoritos disponibles con ese filtro'
+                                  : 'No hay ejercicios que coincidan con tu búsqueda',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.72),
                               ),
                             ),
                           ),
-                        );
-                      },
-                    ),
+                        )
+                      : ListView.separated(
+                          shrinkWrap: true,
+                          itemCount: exercises.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            final exercise = exercises[index];
+                            final isFavorite =
+                                _favoriteIds.contains(exercise.id);
+
+                            return Material(
+                              color: Colors.white.withValues(alpha: 0.03),
+                              borderRadius: BorderRadius.circular(18),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(18),
+                                onTap: () =>
+                                    Navigator.of(context).pop(exercise),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(14),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 42,
+                                        height: 42,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.08,
+                                          ),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        child: const Icon(
+                                          Icons.sports_gymnastics_rounded,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    exercise.name,
+                                                    style: const TextStyle(
+                                                      fontSize: 15,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                    ),
+                                                  ),
+                                                ),
+                                                IconButton(
+                                                  tooltip: isFavorite
+                                                      ? 'Quitar de favoritos'
+                                                      : 'Añadir a favoritos',
+                                                  onPressed: () =>
+                                                      _toggleFavorite(exercise),
+                                                  icon: Icon(
+                                                    isFavorite
+                                                        ? Icons.star_rounded
+                                                        : Icons
+                                                            .star_border_rounded,
+                                                    color: isFavorite
+                                                        ? Colors.amber
+                                                        : Colors.white70,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              exercise.muscleGroup,
+                                              style: TextStyle(
+                                                color: Colors.white.withValues(
+                                                  alpha: 0.72,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Wrap(
+                                              spacing: 6,
+                                              runSpacing: 6,
+                                              children: [
+                                                if (isFavorite)
+                                                  const _MiniTagChip(
+                                                    icon: Icons.star_rounded,
+                                                    label: 'Favorito',
+                                                  ),
+                                                ...exercise.tags.take(3).map(
+                                                      (tag) => _MiniTagChip(
+                                                        icon:
+                                                            Icons.sell_outlined,
+                                                        label: tag,
+                                                      ),
+                                                    ),
+                                                _MiniTagChip(
+                                                  icon: exercise.isCustom
+                                                      ? Icons
+                                                          .auto_fix_high_rounded
+                                                      : Icons.layers_outlined,
+                                                  label: exercise.isCustom
+                                                      ? 'Custom'
+                                                      : 'Base',
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      const Icon(Icons.chevron_right_rounded),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
             ),
           ],
         ),
@@ -2461,257 +2457,302 @@ class _SetEditorSheetState extends State<_SetEditorSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
     return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 16,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 44,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              ),
-            ),
-            const SizedBox(height: 18),
-            Text(
-              widget.isEditing ? 'Editar serie' : 'Añadir serie',
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              widget.exerciseName,
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.72)),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: widget.panelColor,
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Referencia rápida',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+      top: false,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: AnimatedPadding(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 16,
+            bottom: bottomInset + 16,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 44,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  widget.isEditing ? 'Editar serie' : 'Añadir serie',
+                  style: const TextStyle(
+                      fontSize: 22, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  widget.exerciseName,
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.72)),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: widget.panelColor,
+                    borderRadius: BorderRadius.circular(22),
+                    border:
+                        Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (widget.previousSetWeight != null &&
-                          widget.previousSetReps != null)
-                        _QuickFillChip(
-                          label:
-                              '${widget.previousSetIsWarmup ? 'Últ. calent.' : 'Última serie'} ${widget.formatWeight(widget.previousSetWeight!)} × ${widget.previousSetReps}',
-                          onTap: () {
-                            _setWeight(widget.previousSetWeight!);
-                            _setReps(widget.previousSetReps!);
-                          },
-                        ),
-                      if (widget.lastWeight != null && widget.lastReps != null)
-                        _QuickFillChip(
-                          label:
-                              'Última vez ${widget.formatWeight(widget.lastWeight!)} × ${widget.lastReps}',
-                          onTap: () {
-                            _setWeight(widget.lastWeight!);
-                            _setReps(widget.lastReps!);
-                          },
-                        ),
-                      if (widget.prWeight != null && widget.prReps != null)
-                        _QuickFillChip(
-                          label:
-                              'PR ${widget.formatWeight(widget.prWeight!)} × ${widget.prReps}',
-                          onTap: () {
-                            _setWeight(widget.prWeight!);
-                            _setReps(widget.prReps!);
-                          },
-                        ),
-                      if (widget.previousSetWeight == null &&
-                          widget.lastWeight == null &&
-                          widget.prWeight == null)
-                        const _MiniTagChip(
-                          icon: Icons.info_outline_rounded,
-                          label: 'Sin referencias todavía',
-                        ),
+                      const Text(
+                        'Referencia rápida',
+                        style: TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          if (widget.previousSetWeight != null &&
+                              widget.previousSetReps != null)
+                            _QuickFillChip(
+                              label:
+                                  '${widget.previousSetIsWarmup ? 'Últ. calent.' : 'Última serie'} ${widget.formatWeight(widget.previousSetWeight!)} × ${widget.previousSetReps}',
+                              onTap: () {
+                                FocusScope.of(context).unfocus();
+                                _setWeight(widget.previousSetWeight!);
+                                _setReps(widget.previousSetReps!);
+                              },
+                            ),
+                          if (widget.lastWeight != null &&
+                              widget.lastReps != null)
+                            _QuickFillChip(
+                              label:
+                                  'Última vez ${widget.formatWeight(widget.lastWeight!)} × ${widget.lastReps}',
+                              onTap: () {
+                                FocusScope.of(context).unfocus();
+                                _setWeight(widget.lastWeight!);
+                                _setReps(widget.lastReps!);
+                              },
+                            ),
+                          if (widget.prWeight != null && widget.prReps != null)
+                            _QuickFillChip(
+                              label:
+                                  'PR ${widget.formatWeight(widget.prWeight!)} × ${widget.prReps}',
+                              onTap: () {
+                                FocusScope.of(context).unfocus();
+                                _setWeight(widget.prWeight!);
+                                _setReps(widget.prReps!);
+                              },
+                            ),
+                          if (widget.previousSetWeight == null &&
+                              widget.lastWeight == null &&
+                              widget.prWeight == null)
+                            const _MiniTagChip(
+                              icon: Icons.info_outline_rounded,
+                              label: 'Sin referencias todavía',
+                            ),
+                        ],
+                      ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _weightController,
-                    autofocus: true,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _weightController,
+                        autofocus: true,
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        textInputAction: TextInputAction.next,
+                        onTapOutside: (_) => FocusScope.of(context).unfocus(),
+                        decoration: InputDecoration(
+                          labelText: 'Peso (kg)',
+                          errorText: _errorText,
+                        ),
+                        onChanged: (_) {
+                          if (_errorText != null) {
+                            setState(() {
+                              _errorText = null;
+                            });
+                          }
+                        },
+                      ),
                     ),
-                    decoration: InputDecoration(
-                      labelText: 'Peso (kg)',
-                      errorText: _errorText,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: _repsController,
+                        keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.done,
+                        onTapOutside: (_) => FocusScope.of(context).unfocus(),
+                        onSubmitted: (_) => _save(),
+                        decoration: const InputDecoration(
+                          labelText: 'Repeticiones',
+                        ),
+                      ),
                     ),
-                    onChanged: (_) {
-                      if (_errorText != null) {
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Tipo de serie',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ChoiceChip(
+                      label: const Text('Serie efectiva'),
+                      selected: !_isWarmup,
+                      onSelected: (_) {
+                        FocusScope.of(context).unfocus();
                         setState(() {
-                          _errorText = null;
+                          _isWarmup = false;
                         });
-                      }
-                    },
+                      },
+                    ),
+                    ChoiceChip(
+                      label: const Text('Calentamiento'),
+                      selected: _isWarmup,
+                      onSelected: (_) {
+                        FocusScope.of(context).unfocus();
+                        setState(() {
+                          _isWarmup = true;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Ajustes rápidos',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _QuickAdjustChip(
+                      label: '+2.5 kg',
+                      onTap: () {
+                        FocusScope.of(context).unfocus();
+                        _setWeight(_parseWeight() + 2.5);
+                      },
+                    ),
+                    _QuickAdjustChip(
+                      label: '+5 kg',
+                      onTap: () {
+                        FocusScope.of(context).unfocus();
+                        _setWeight(_parseWeight() + 5);
+                      },
+                    ),
+                    _QuickAdjustChip(
+                      label: '-2.5 kg',
+                      onTap: () {
+                        FocusScope.of(context).unfocus();
+                        _setWeight(_parseWeight() - 2.5);
+                      },
+                    ),
+                    _QuickAdjustChip(
+                      label: '+1 rep',
+                      onTap: () {
+                        FocusScope.of(context).unfocus();
+                        _setReps(_parseReps() + 1);
+                      },
+                    ),
+                    _QuickAdjustChip(
+                      label: '+2 reps',
+                      onTap: () {
+                        FocusScope.of(context).unfocus();
+                        _setReps(_parseReps() + 2);
+                      },
+                    ),
+                    _QuickAdjustChip(
+                      label: '-1 rep',
+                      onTap: () {
+                        FocusScope.of(context).unfocus();
+                        _setReps(_parseReps() - 1);
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Descanso que se guardará',
+                        style: TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        widget.restLabel,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _isWarmup
+                            ? 'Se guardará como serie de calentamiento'
+                            : 'Se guardará como serie efectiva',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white.withValues(alpha: 0.68),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextField(
-                    controller: _repsController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Repeticiones',
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Cancelar'),
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: _save,
+                        child: Text(
+                          widget.isEditing
+                              ? 'Guardar cambios'
+                              : 'Guardar serie',
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'Tipo de serie',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ChoiceChip(
-                  label: const Text('Serie efectiva'),
-                  selected: !_isWarmup,
-                  onSelected: (_) {
-                    setState(() {
-                      _isWarmup = false;
-                    });
-                  },
-                ),
-                ChoiceChip(
-                  label: const Text('Calentamiento'),
-                  selected: _isWarmup,
-                  onSelected: (_) {
-                    setState(() {
-                      _isWarmup = true;
-                    });
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Ajustes rápidos',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _QuickAdjustChip(
-                  label: '+2.5 kg',
-                  onTap: () => _setWeight(_parseWeight() + 2.5),
-                ),
-                _QuickAdjustChip(
-                  label: '+5 kg',
-                  onTap: () => _setWeight(_parseWeight() + 5),
-                ),
-                _QuickAdjustChip(
-                  label: '-2.5 kg',
-                  onTap: () => _setWeight(_parseWeight() - 2.5),
-                ),
-                _QuickAdjustChip(
-                  label: '+1 rep',
-                  onTap: () => _setReps(_parseReps() + 1),
-                ),
-                _QuickAdjustChip(
-                  label: '+2 reps',
-                  onTap: () => _setReps(_parseReps() + 2),
-                ),
-                _QuickAdjustChip(
-                  label: '-1 rep',
-                  onTap: () => _setReps(_parseReps() - 1),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.04),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Descanso que se guardará',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    widget.restLabel,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    _isWarmup
-                        ? 'Se guardará como serie de calentamiento'
-                        : 'Se guardará como serie efectiva',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.white.withValues(alpha: 0.68),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 18),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Cancelar'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: _save,
-                    child: Text(
-                      widget.isEditing ? 'Guardar cambios' : 'Guardar serie',
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );
