@@ -2489,15 +2489,37 @@ class _SetEditorSheetState extends State<_SetEditorSheet> {
                   ),
                 ),
                 const SizedBox(height: 18),
-                Text(
-                  widget.isEditing ? 'Editar serie' : 'Añadir serie',
-                  style: const TextStyle(
-                      fontSize: 22, fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  widget.exerciseName,
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.72)),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.isEditing ? 'Editar serie' : 'Añadir serie',
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            widget.exerciseName,
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.72),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (bottomInset > 0)
+                      IconButton(
+                        onPressed: () => FocusScope.of(context).unfocus(),
+                        icon: const Icon(Icons.keyboard_hide_rounded),
+                        tooltip: 'Ocultar teclado',
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 Container(
