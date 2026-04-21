@@ -13,6 +13,7 @@ import '../services/workout_draft_service.dart';
 import '../services/workout_live_activity_service.dart';
 import '../widgets/workout/set_editor_sheet.dart';
 import '../widgets/workout/workout_exercise_card.dart';
+import '../widgets/workout/workout_header_panel.dart';
 
 class WorkoutScreen extends StatefulWidget {
   final String title;
@@ -988,149 +989,25 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   }
 
   Widget _buildTopSummary() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF172235), Color(0xFF1D3A45)],
-        ),
-        borderRadius: BorderRadius.circular(26),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.18),
-            blurRadius: 18,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.title,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Entrenamiento libre',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.78),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Tiempo',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white.withValues(alpha: 0.72),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _formatDuration(_elapsedSeconds),
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              _SummaryChip(
-                icon: Icons.fitness_center_rounded,
-                label: 'Ejercicios',
-                value: '${_selectedExercises.length}',
-              ),
-              _SummaryChip(
-                icon: Icons.layers_outlined,
-                label: 'Series',
-                value: '$_totalSets',
-              ),
-              _SummaryChip(
-                icon: Icons.local_fire_department_outlined,
-                label: 'Efectivas',
-                value: '$_totalWorkingSets',
-              ),
-              _SummaryChip(
-                icon: Icons.wb_sunny_outlined,
-                label: 'Calent.',
-                value: '$_totalWarmupSets',
-              ),
-              _SummaryChip(
-                icon: Icons.monitor_weight_outlined,
-                label: 'Volumen',
-                value: _formatCompactVolume(_totalVolume),
-              ),
-              _SummaryChip(
-                icon: Icons.timer_outlined,
-                label: 'Descanso',
-                value: _hasStartedRestTracking
-                    ? _formatRestLabel(_currentRestSeconds)
-                    : 'Sin iniciar',
-              ),
-            ],
-          ),
-        ],
-      ),
+    return WorkoutHeaderPanel(
+      title: widget.title,
+      elapsedLabel: _formatDuration(_elapsedSeconds),
+      exerciseCountLabel: '${_selectedExercises.length}',
+      totalSetsLabel: '$_totalSets',
+      totalWorkingSetsLabel: '$_totalWorkingSets',
+      totalWarmupSetsLabel: '$_totalWarmupSets',
+      totalVolumeLabel: _formatCompactVolume(_totalVolume),
+      restLabel: _hasStartedRestTracking
+          ? _formatRestLabel(_currentRestSeconds)
+          : 'Sin iniciar',
     );
   }
 
   Widget _buildActionBar() {
-    return Row(
-      children: [
-        Expanded(
-          child: FilledButton.icon(
-            onPressed: _showExercisePicker,
-            icon: const Icon(Icons.add),
-            label: const Text('Añadir ejercicio'),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: _isSaving ? null : _finishWorkout,
-            icon: _isSaving
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.check_circle_outline_rounded),
-            label: Text(_isSaving ? 'Guardando...' : 'Finalizar'),
-          ),
-        ),
-      ],
+    return WorkoutActionBar(
+      isSaving: _isSaving,
+      onAddExercise: _showExercisePicker,
+      onFinish: _finishWorkout,
     );
   }
 
@@ -1235,49 +1112,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   }
 
   Widget _buildEmptyState() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        color: _panelColor,
-        borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 70,
-            height: 70,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.06),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.fitness_center_rounded, size: 34),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Empieza tu entrenamiento',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Añade ejercicios y registra series con peso, repeticiones y descanso automático.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.74),
-              height: 1.45,
-            ),
-          ),
-          const SizedBox(height: 18),
-          FilledButton.icon(
-            onPressed: _showExercisePicker,
-            icon: const Icon(Icons.add),
-            label: const Text('Añadir primer ejercicio'),
-          ),
-        ],
-      ),
-    );
+    return WorkoutEmptyStateCard(onAddExercise: _showExercisePicker);
   }
 
   @override
@@ -1318,36 +1153,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                 _buildEmptyState()
               else ...[
                 if (_selectedExercises.length > 1)
-                  Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.only(bottom: 14),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: _panelSoftColor,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.05),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.info_outline_rounded,
-                          size: 18,
-                          color: Colors.white.withValues(alpha: 0.78),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Mantén el icono de arrastre para reordenar ejercicios.',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.78),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  const WorkoutReorderHintCard(),
                 ReorderableListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -1627,57 +1433,6 @@ class _WorkoutSetEntry {
       restSeconds: restSeconds ?? this.restSeconds,
       createdAt: createdAt ?? this.createdAt,
       isWarmup: isWarmup ?? this.isWarmup,
-    );
-  }
-}
-
-class _SummaryChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-
-  const _SummaryChip({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 18),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.white.withValues(alpha: 0.72),
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 }

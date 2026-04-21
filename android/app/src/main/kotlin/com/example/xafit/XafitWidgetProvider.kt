@@ -5,7 +5,7 @@ import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.SharedPreferences
 import android.widget.RemoteViews
-import es.antoniosanchez.xafit.R
+import com.example.xafit.R
 
 /**
  * XafitWidgetProvider — BroadcastReceiver del widget de pantalla de inicio.
@@ -45,10 +45,10 @@ class XafitWidgetProvider : AppWidgetProvider() {
 
         // Claves — deben ser idénticas a _WidgetKeys en home_widget_service.dart
         private const val KEY_WEEKLY_SESSIONS = "weekly_sessions"
-        private const val KEY_WEEKLY_VOLUME   = "weekly_volume"
-        private const val KEY_LAST_EXERCISE   = "last_exercise"
-        private const val KEY_LAST_DATE       = "last_session_date"
-        private const val KEY_IS_ACTIVE       = "is_workout_active"
+        private const val KEY_WEEKLY_VOLUME = "weekly_volume"
+        private const val KEY_LAST_EXERCISE = "last_exercise"
+        private const val KEY_LAST_DATE = "last_session_date"
+        private const val KEY_IS_ACTIVE = "is_workout_active"
 
         /**
          * Lee los datos de SharedPreferences y actualiza las vistas del widget.
@@ -66,10 +66,13 @@ class XafitWidgetProvider : AppWidgetProvider() {
             // Leemos los datos guardados por HomeWidgetService desde Dart.
             // Si no hay datos aún, usamos valores por defecto.
             val weeklySessions = prefs.getInt(KEY_WEEKLY_SESSIONS, 0)
-            val weeklyVolume   = prefs.getString(KEY_WEEKLY_VOLUME, "0 kg") ?: "0 kg"
-            val lastExercise   = prefs.getString(KEY_LAST_EXERCISE, "Sin entrenamientos aún") ?: "Sin entrenamientos aún"
-            val lastDate       = prefs.getString(KEY_LAST_DATE, "") ?: ""
-            val isActive       = prefs.getBoolean(KEY_IS_ACTIVE, false)
+            val weeklyVolume = prefs.getString(KEY_WEEKLY_VOLUME, "0 kg") ?: "0 kg"
+            val lastExercise = prefs.getString(
+                KEY_LAST_EXERCISE,
+                "Sin entrenamientos aún"
+            ) ?: "Sin entrenamientos aún"
+            val lastDate = prefs.getString(KEY_LAST_DATE, "") ?: ""
+            val isActive = prefs.getBoolean(KEY_IS_ACTIVE, false)
 
             // RemoteViews es el sistema de vistas de Android para widgets.
             // Solo podemos actualizar vistas por su id, no con lógica compleja.
