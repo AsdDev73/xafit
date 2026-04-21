@@ -12,6 +12,7 @@ import '../services/favorite_exercises_service.dart';
 import '../services/workout_draft_service.dart';
 import '../services/workout_live_activity_service.dart';
 import '../widgets/workout/set_editor_sheet.dart';
+import '../widgets/workout/workout_exercise_card.dart';
 
 class WorkoutScreen extends StatefulWidget {
   final String title;
@@ -1133,131 +1134,38 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     );
   }
 
-  Widget _buildExerciseReference(Exercise exercise) {
+  List<WorkoutTagChipData> _buildExerciseReferenceTags(Exercise exercise) {
     final snapshot = _statsForExercise(exercise);
 
     if (snapshot == null) {
-      return Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: const [
-          _MiniTagChip(
-            icon: Icons.info_outline_rounded,
-            label: 'Sin historial todavía',
-          ),
-        ],
-      );
+      return const [
+        WorkoutTagChipData(
+          icon: Icons.info_outline_rounded,
+          label: 'Sin historial todavía',
+        ),
+      ];
     }
 
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        _MiniTagChip(
-          icon: Icons.history_rounded,
-          label:
-              'Última vez ${_formatWeight(snapshot.lastWeight)} × ${snapshot.lastReps}',
-        ),
-        _MiniTagChip(
-          icon: Icons.emoji_events_outlined,
-          label: 'PR ${_formatWeight(snapshot.prWeight)} × ${snapshot.prReps}',
-        ),
-      ],
-    );
+    return [
+      WorkoutTagChipData(
+        icon: Icons.history_rounded,
+        label:
+            'Última vez ${_formatWeight(snapshot.lastWeight)} × ${snapshot.lastReps}',
+      ),
+      WorkoutTagChipData(
+        icon: Icons.emoji_events_outlined,
+        label: 'PR ${_formatWeight(snapshot.prWeight)} × ${snapshot.prReps}',
+      ),
+    ];
   }
 
-  Widget _buildSetCard(
-    _WorkoutExerciseEntry entry,
-    _WorkoutSetEntry set,
-    int index,
-  ) {
-    final isWarmup = set.isWarmup;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: isWarmup
-            ? const Color(0xFFFFB74D).withValues(alpha: 0.08)
-            : _panelSoftColor,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: isWarmup
-              ? const Color(0xFFFFB74D).withValues(alpha: 0.28)
-              : Colors.white.withValues(alpha: 0.05),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: isWarmup
-                  ? const Color(0xFFFFB74D).withValues(alpha: 0.16)
-                  : Colors.white.withValues(alpha: 0.07),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Center(
-              child: Text(
-                '${set.setNumber}',
-                style: const TextStyle(fontWeight: FontWeight.w800),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${_formatWeight(set.weight)} kg × ${set.reps} reps',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  children: [
-                    _MiniTagChip(
-                      icon: isWarmup
-                          ? Icons.wb_sunny_outlined
-                          : Icons.local_fire_department_outlined,
-                      label: isWarmup ? 'Calentamiento' : 'Serie efectiva',
-                    ),
-                    _MiniTagChip(
-                      icon: Icons.timelapse_rounded,
-                      label: 'Descanso ${_formatRestLabel(set.restSeconds)}',
-                    ),
-                    _MiniTagChip(
-                      icon: Icons.fitness_center_rounded,
-                      label:
-                          'Volumen ${_formatCompactVolume(set.weight * set.reps)}',
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert_rounded),
-            onSelected: (value) {
-              if (value == 'edit') {
-                _showSetEditorSheet(entry, setIndex: index);
-              } else if (value == 'delete') {
-                _deleteSet(entry, index);
-              }
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: 'edit', child: Text('Editar serie')),
-              PopupMenuItem(value: 'delete', child: Text('Eliminar serie')),
-            ],
-          ),
-        ],
-      ),
+  WorkoutSetCardData _buildSetCardData(_WorkoutSetEntry set) {
+    return WorkoutSetCardData(
+      setNumber: set.setNumber,
+      isWarmup: set.isWarmup,
+      performanceLabel: '${_formatWeight(set.weight)} kg × ${set.reps} reps',
+      restLabel: 'Descanso ${_formatRestLabel(set.restSeconds)}',
+      volumeLabel: 'Volumen ${_formatCompactVolume(set.weight * set.reps)}',
     );
   }
 
@@ -1266,179 +1174,61 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   Widget _buildExerciseCard(_WorkoutExerciseEntry entry, int index) {
     final exerciseVolume = _exerciseVolume(entry);
     final isCustom = entry.exercise.isCustom;
+    final warmupCount = _exerciseWarmupCount(entry);
 
-    return Card(
+    final summaryTags = <WorkoutTagChipData>[
+      WorkoutTagChipData(
+        icon: Icons.category_outlined,
+        label: entry.exercise.muscleGroup,
+      ),
+      WorkoutTagChipData(
+        icon: isCustom
+            ? Icons.auto_fix_high_rounded
+            : Icons.layers_outlined,
+        label: isCustom ? 'Personalizado' : 'Base',
+      ),
+      WorkoutTagChipData(
+        icon: Icons.layers_rounded,
+        label: '${entry.sets.length} series',
+      ),
+      WorkoutTagChipData(
+        icon: Icons.local_fire_department_outlined,
+        label: '${_exerciseWorkingCount(entry)} efectivas',
+      ),
+      if (warmupCount > 0)
+        WorkoutTagChipData(
+          icon: Icons.wb_sunny_outlined,
+          label: '$warmupCount calent.',
+        ),
+      WorkoutTagChipData(
+        icon: Icons.monitor_weight_outlined,
+        label: _formatCompactVolume(exerciseVolume),
+      ),
+    ];
+
+    return WorkoutExerciseCard(
       key: ValueKey('exercise_${entry.exercise.id}'),
-      margin: const EdgeInsets.only(bottom: 14),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Icon(Icons.sports_gymnastics_rounded),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        entry.exercise.name,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 6,
-                        children: [
-                          _MiniTagChip(
-                            icon: Icons.category_outlined,
-                            label: entry.exercise.muscleGroup,
-                          ),
-                          _MiniTagChip(
-                            icon: isCustom
-                                ? Icons.auto_fix_high_rounded
-                                : Icons.layers_outlined,
-                            label: isCustom ? 'Personalizado' : 'Base',
-                          ),
-                          _MiniTagChip(
-                            icon: Icons.layers_rounded,
-                            label: '${entry.sets.length} series',
-                          ),
-                          _MiniTagChip(
-                            icon: Icons.local_fire_department_outlined,
-                            label: '${_exerciseWorkingCount(entry)} efectivas',
-                          ),
-                          if (_exerciseWarmupCount(entry) > 0)
-                            _MiniTagChip(
-                              icon: Icons.wb_sunny_outlined,
-                              label: '${_exerciseWarmupCount(entry)} calent.',
-                            ),
-                          _MiniTagChip(
-                            icon: Icons.monitor_weight_outlined,
-                            label: _formatCompactVolume(exerciseVolume),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                PopupMenuButton<String>(
-                  onSelected: (value) {
-                    if (value == 'addSet') {
-                      _showSetEditorSheet(entry);
-                    } else if (value == 'duplicate') {
-                      _duplicateLastSet(entry);
-                    } else if (value == 'removeExercise') {
-                      _removeExercise(entry);
-                    }
-                  },
-                  itemBuilder: (context) => const [
-                    PopupMenuItem(value: 'addSet', child: Text('Añadir serie')),
-                    PopupMenuItem(
-                      value: 'duplicate',
-                      child: Text('Duplicar última serie'),
-                    ),
-                    PopupMenuItem(
-                      value: 'removeExercise',
-                      child: Text('Quitar ejercicio'),
-                    ),
-                  ],
-                ),
-                ReorderableDragStartListener(
-                  index: index,
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 4),
-                    child: Icon(
-                      Icons.drag_handle_rounded,
-                      color: Colors.white.withValues(alpha: 0.70),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            _buildExerciseReference(entry.exercise),
-            const SizedBox(height: 14),
-            if (entry.sets.isEmpty)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.03),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.05),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Todavía no hay series',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Añade la primera serie para empezar a registrar este ejercicio.',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.72),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    FilledButton.icon(
-                      onPressed: () => _showSetEditorSheet(entry),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Añadir primera serie'),
-                    ),
-                  ],
-                ),
-              )
-            else
-              Column(
-                children: [
-                  for (int i = 0; i < entry.sets.length; i++)
-                    _buildSetCard(entry, entry.sets[i], i),
-                ],
-              ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _showSetEditorSheet(entry),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Nueva serie'),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: entry.sets.isEmpty
-                        ? null
-                        : () => _duplicateLastSet(entry),
-                    icon: const Icon(Icons.copy_rounded),
-                    label: const Text('Duplicar'),
-                  ),
-                ),
-              ],
-            ),
-          ],
+      title: entry.exercise.name,
+      summaryTags: summaryTags,
+      referenceTags: _buildExerciseReferenceTags(entry.exercise),
+      setCards: [
+        for (final set in entry.sets) _buildSetCardData(set),
+      ],
+      onAddSet: () => _showSetEditorSheet(entry),
+      onDuplicateLastSet: entry.sets.isEmpty
+          ? null
+          : () => _duplicateLastSet(entry),
+      onRemoveExercise: () => _removeExercise(entry),
+      onEditSet: (setIndex) => _showSetEditorSheet(entry, setIndex: setIndex),
+      onDeleteSet: (setIndex) => _deleteSet(entry, setIndex),
+      dragHandle: ReorderableDragStartListener(
+        index: index,
+        child: Padding(
+          padding: const EdgeInsets.only(left: 4),
+          child: Icon(
+            Icons.drag_handle_rounded,
+            color: Colors.white.withValues(alpha: 0.70),
+          ),
         ),
       ),
     );
