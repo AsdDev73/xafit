@@ -138,8 +138,8 @@ class _ProgressScreenState extends State<ProgressScreen> {
         return;
       }
 
-      final importResult = await AppRepositories.backupService
-          .importBackupFromFile(File(path));
+      final importResult =
+          await AppRepositories.backupService.importBackupFromFile(File(path));
 
       await _refresh();
 
@@ -158,6 +158,35 @@ class _ProgressScreenState extends State<ProgressScreen> {
     } catch (_) {
       if (!mounted) return;
       _showFloatingSnackBar('Error al importar el backup');
+    }
+  }
+
+  Future<void> _confirmImportBackup() async {
+    final shouldImport = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Importar backup'),
+          content: const Text(
+            'La importación añadirá sesiones, registros y ejercicios desde el archivo seleccionado. '
+            'Haz una exportación antes si quieres una copia de seguridad extra.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Continuar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldImport == true) {
+      await _importBackup();
     }
   }
 
@@ -198,8 +227,8 @@ class _ProgressScreenState extends State<ProgressScreen> {
       _showFloatingSnackBar(
         enabled
             ? (kIsWeb
-                  ? 'Configuración del recordatorio guardada'
-                  : 'Recordatorio semanal activado')
+                ? 'Configuración del recordatorio guardada'
+                : 'Recordatorio semanal activado')
             : 'Recordatorio semanal desactivado',
       );
     } catch (e) {
@@ -383,8 +412,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
   }
 
   Future<void> _deleteEntry(BodyProgressEntry entry) async {
-    final confirmed =
-        await showDialog<bool>(
+    final confirmed = await showDialog<bool>(
           context: context,
           builder: (context) {
             return AlertDialog(
@@ -510,6 +538,40 @@ class _ProgressScreenState extends State<ProgressScreen> {
     return latest - first;
   }
 
+  double? get _lastWeightChange {
+    if (_entries.length < 2) return null;
+    return _entries.last.weight - _entries[_entries.length - 2].weight;
+  }
+
+  double? get _targetWeightDelta {
+    final latest = _latestWeight;
+    final target = _profile.targetWeight;
+    if (latest == null || target == null) return null;
+    return latest - target;
+  }
+
+  int get _entriesLast30Days {
+    final now = DateTime.now();
+    final cutoff = DateTime(now.year, now.month, now.day)
+        .subtract(const Duration(days: 30));
+
+    return _entries.where((entry) {
+      final date = DateTime(entry.date.year, entry.date.month, entry.date.day);
+      return !date.isBefore(cutoff);
+    }).length;
+  }
+
+  int? get _daysSinceLastEntry {
+    if (_entries.isEmpty) return null;
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final last = _entries.last.date;
+    final lastDay = DateTime(last.year, last.month, last.day);
+
+    return today.difference(lastDay).inDays;
+  }
+
   double? get _latestBodyFat {
     for (final entry in _entries.reversed) {
       if (entry.bodyFat != null) return entry.bodyFat;
@@ -624,8 +686,11 @@ class _ProgressScreenState extends State<ProgressScreen> {
   Widget _buildSummaryCards() {
     final latestWeight = _latestWeight;
     final latestBodyFat = _latestBodyFat;
-    final latestWaist = _latestWaist;
     final delta = _weightDelta;
+    final targetDelta = _targetWeightDelta;
+    final lastWeightChange = _lastWeightChange;
+    final daysSinceLastEntry = _daysSinceLastEntry;
+    final recentEntries = _entriesLast30Days;
 
     final cards = [
       _MetricCard(
@@ -635,14 +700,54 @@ class _ProgressScreenState extends State<ProgressScreen> {
         icon: Icons.monitor_weight_outlined,
       ),
       _MetricCard(
-        title: 'Cambio',
+        title: 'Cambio total',
         value: delta == null
             ? '—'
             : '${delta > 0 ? '+' : ''}${_formatDouble(delta)} kg',
-        subtitle: _entries.length < 2
-            ? 'Faltan datos'
-            : 'Desde el primer registro',
+        subtitle:
+            _entries.length < 2 ? 'Faltan datos' : 'Desde el primer registro',
         icon: Icons.trending_up_rounded,
+      ),
+      _MetricCard(
+        title: 'Último cambio',
+        value: lastWeightChange == null
+            ? '—'
+            : '${lastWeightChange > 0 ? '+' : ''}${_formatDouble(lastWeightChange)} kg',
+        subtitle: _entries.length < 2
+            ? 'Solo hay una medición'
+            : 'Frente al registro anterior',
+        icon: Icons.show_chart_rounded,
+      ),
+      _MetricCard(
+        title: 'Objetivo',
+        value: targetDelta == null
+            ? '—'
+            : '${targetDelta > 0 ? '+' : ''}${_formatDouble(targetDelta)} kg',
+        subtitle: _profile.targetWeight == null
+            ? 'Sin peso objetivo'
+            : 'Distancia al objetivo',
+        icon: Icons.flag_outlined,
+      ),
+      _MetricCard(
+        title: 'Registros 30 días',
+        value: '$recentEntries',
+        subtitle:
+            recentEntries == 0 ? 'Sin actividad reciente' : 'Últimos 30 días',
+        icon: Icons.event_note_rounded,
+      ),
+      _MetricCard(
+        title: 'Último check-in',
+        value: daysSinceLastEntry == null
+            ? '—'
+            : daysSinceLastEntry == 0
+                ? 'Hoy'
+                : '$daysSinceLastEntry d',
+        subtitle: daysSinceLastEntry == null
+            ? 'Sin registros'
+            : daysSinceLastEntry <= 7
+                ? 'Buen ritmo'
+                : 'Conviene actualizar',
+        icon: Icons.schedule_rounded,
       ),
       _MetricCard(
         title: '% Grasa',
@@ -652,8 +757,9 @@ class _ProgressScreenState extends State<ProgressScreen> {
       ),
       _MetricCard(
         title: 'Cintura',
-        value: latestWaist == null ? '—' : '${_formatDouble(latestWaist)} cm',
-        subtitle: latestWaist == null ? 'No registrada' : 'Última medición',
+        value:
+            _latestWaist == null ? '—' : '${_formatDouble(_latestWaist!)} cm',
+        subtitle: _latestWaist == null ? 'No registrada' : 'Última medición',
         icon: Icons.straighten_rounded,
       ),
     ];
@@ -668,10 +774,83 @@ class _ProgressScreenState extends State<ProgressScreen> {
           physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: 10,
           crossAxisSpacing: 10,
-          childAspectRatio: isCompact ? 2.6 : 1.12,
+          childAspectRatio: isCompact ? 2.5 : 1.45,
           children: cards,
         );
       },
+    );
+  }
+
+  Widget _buildBackupCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(Icons.shield_outlined),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Backup y restauración',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Exporta una copia antes de cambiar mucho tus datos o de probar una build nueva.',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.72),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                FilledButton.icon(
+                  onPressed: _exportBackup,
+                  icon: const Icon(Icons.ios_share_rounded),
+                  label: const Text('Exportar backup'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _confirmImportBackup,
+                  icon: const Icon(Icons.file_upload_outlined),
+                  label: const Text('Importar backup'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Consejo: exporta un backup antes de importar otro archivo para tener una copia de seguridad rápida.',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.white.withValues(alpha: 0.62),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -895,7 +1074,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
         actions: [
           IconButton(
             tooltip: 'Importar backup',
-            onPressed: _importBackup,
+            onPressed: _confirmImportBackup,
             icon: const Icon(Icons.file_upload_outlined),
           ),
           IconButton(
@@ -924,17 +1103,21 @@ class _ProgressScreenState extends State<ProgressScreen> {
                 children: [
                   _buildProfileCard(),
                   const SizedBox(height: 16),
-                  _buildSummaryCards(),
-                  const SizedBox(height: 16),
+                  if (hasEntries) ...[
+                    _buildChartCard(),
+                    const SizedBox(height: 16),
+                    _buildMetricSelector(),
+                    const SizedBox(height: 16),
+                    _buildSummaryCards(),
+                    const SizedBox(height: 16),
+                  ],
                   _buildWeeklyReminderCard(),
+                  const SizedBox(height: 16),
+                  _buildBackupCard(),
                   const SizedBox(height: 16),
                   if (!hasEntries)
                     _buildEmptyState()
                   else ...[
-                    _buildMetricSelector(),
-                    const SizedBox(height: 16),
-                    _buildChartCard(),
-                    const SizedBox(height: 16),
                     _buildHistoryCard(),
                     const SizedBox(height: 90),
                   ],
@@ -1217,9 +1400,8 @@ class _LineChartPainter extends CustomPainter {
     final values = points.map((e) => e.value).toList();
     final minValue = values.reduce(math.min);
     final maxValue = values.reduce(math.max);
-    final range = (maxValue - minValue).abs() < 0.0001
-        ? 1.0
-        : (maxValue - minValue);
+    final range =
+        (maxValue - minValue).abs() < 0.0001 ? 1.0 : (maxValue - minValue);
 
     final gridPaint = Paint()
       ..color = Colors.white.withValues(alpha: 0.06)
@@ -1260,22 +1442,21 @@ class _LineChartPainter extends CustomPainter {
         ..close();
 
       final fillPaint = Paint()
-        ..shader =
-            LinearGradient(
-              colors: [
-                Colors.lightBlueAccent.withValues(alpha: 0.25),
-                Colors.lightBlueAccent.withValues(alpha: 0.02),
-              ],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ).createShader(
-              Rect.fromLTWH(
-                horizontalPadding,
-                topPadding,
-                chartWidth,
-                chartHeight,
-              ),
-            );
+        ..shader = LinearGradient(
+          colors: [
+            Colors.lightBlueAccent.withValues(alpha: 0.25),
+            Colors.lightBlueAccent.withValues(alpha: 0.02),
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ).createShader(
+          Rect.fromLTWH(
+            horizontalPadding,
+            topPadding,
+            chartWidth,
+            chartHeight,
+          ),
+        );
 
       canvas.drawPath(fillPath, fillPaint);
     }
@@ -1568,8 +1749,7 @@ class _BodyProgressEntryDialogState extends State<_BodyProgressEntryDialog> {
     }
 
     final entry = BodyProgressEntry(
-      id:
-          widget.existing?.id ??
+      id: widget.existing?.id ??
           DateTime.now().microsecondsSinceEpoch.toString(),
       date: _selectedDate,
       weight: weight,
